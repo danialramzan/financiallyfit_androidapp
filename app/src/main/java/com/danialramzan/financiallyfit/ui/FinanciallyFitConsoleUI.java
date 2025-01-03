@@ -19,6 +19,7 @@ import static ui.FinanciallyFitGUI.printLog;
  */
 public class FinanciallyFitConsoleUI {
 
+
     private static final String JSON_FILEPATH = "./data/membersManager.json";
 
     private FinanciallyFitModel financiallyFitModel = new FinanciallyFitModel();
