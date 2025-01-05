@@ -1,0 +1,47 @@
+{"Gym Members": [
+    {
+        "dailyPenalty": 15,
+        "attendanceCount": 1,
+        "attendanceLog": {"2020-02-17": 3},
+        "numOfDaysLeftInMonth": 13,
+        "baseMembershipCost": 13,
+        "allowedMiss": 4,
+        "username": "Danial Ramzan_2020-02-17"
+    },
+    {
+        "dailyPenalty": 15,
+        "attendanceCount": 0,
+        "attendanceLog": {},
+        "numOfDaysLeftInMonth": 12,
+        "baseMembershipCost": 12,
+        "allowedMiss": 3,
+        "username": "Owen_2020-02-18"
+    },
+    {
+        "dailyPenalty": 15,
+        "attendanceCount": 0,
+        "attendanceLog": {},
+        "numOfDaysLeftInMonth": 11,
+        "baseMembershipCost": 11,
+        "allowedMiss": 2,
+        "username": "Peter_2020-02-19"
+    },
+    {
+        "dailyPenalty": 15,
+        "attendanceCount": 1,
+        "attendanceLog": {"2020-02-20": 2},
+        "numOfDaysLeftInMonth": 14,
+        "baseMembershipCost": 14,
+        "allowedMiss": 4,
+        "username": "Obama_2020-02-16"
+    },
+    {
+        "dailyPenalty": 15,
+        "attendanceCount": 1,
+        "attendanceLog": {"2020-02-20": 2},
+        "numOfDaysLeftInMonth": 15,
+        "baseMembershipCost": 15,
+        "allowedMiss": 2,
+        "username": "Biden_2020-02-15"
+    }
+]}

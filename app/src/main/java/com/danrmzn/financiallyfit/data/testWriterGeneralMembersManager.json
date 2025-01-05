@@ -1,0 +1,23 @@
+{"Gym Members": [
+    {
+        "dailyPenalty": 15,
+        "attendanceCount": 1,
+        "attendanceLog": {"2023-10-22": 3},
+        "numOfDaysLeftInMonth": 10,
+        "baseMembershipCost": 10,
+        "allowedMiss": 4,
+        "username": "paul_2023-10-22"
+    },
+    {
+        "dailyPenalty": 15,
+        "attendanceCount": 2,
+        "attendanceLog": {
+            "2023-10-24": 4,
+            "2023-10-25": 3
+        },
+        "numOfDaysLeftInMonth": 9,
+        "baseMembershipCost": 10,
+        "allowedMiss": 3,
+        "username": "obama_2023-10-23"
+    }
+]}
