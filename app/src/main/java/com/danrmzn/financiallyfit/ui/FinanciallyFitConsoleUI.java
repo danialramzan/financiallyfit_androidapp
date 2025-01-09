@@ -11,7 +11,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.*;
 
-import static com.danrmzn.financiallyfit.ui.FinanciallyFitGUI.printLog;
+import com.danrmzn.financiallyfit.ui.FinanciallyFitConsoleUI;
 
 
 /*
@@ -134,7 +134,7 @@ public class FinanciallyFitConsoleUI {
     // EFFECTS: Exits the Program
     private void exit() {
         System.out.println("Exiting the FinanciallyFit terminal. Goodbye!");
-        printLog(EventLog.getInstance());
+//        printLog(EventLog.getInstance());
         System.exit(0);
     }
 
