@@ -1,19 +1,20 @@
 plugins {
     id 'com.google.gms.google-services'
     alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
 
 }
 
 android {
     namespace 'com.danrmzn.financiallyfit'
-    compileSdk 34
+    compileSdk 35
 
     defaultConfig {
         applicationId "com.danrmzn.financiallyfit"
         minSdk 24
-        targetSdk 34
+        targetSdk 35
         versionCode 1
-        versionName "1.0"
+        versionName "1.42.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -28,8 +29,16 @@ android {
         sourceCompatibility JavaVersion.VERSION_11
         targetCompatibility JavaVersion.VERSION_11
     }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.14"
+    }
     buildFeatures {
         viewBinding true
+        compose true
+    }
+    kotlinOptions {
+        jvmTarget = '11'
     }
 }
 
@@ -49,10 +58,11 @@ dependencies {
 //    implementation "androidx.compose.ui:ui-graphics"
 //    implementation "androidx.compose.ui:ui-tooling-preview"
 //    implementation "androidx.compose.material3:material3"
-//    implementation "androidx.navigation:navigation-compose:2.7.7"
+    implementation "androidx.navigation:navigation-compose:2.7.7"
 //    implementation "androidx.hilt:hilt-navigation-compose:1.2.0"
 //    implementation "com.google.dagger:hilt-android:2.49"
 //    annotationProcessor "com.google.dagger:hilt-compiler:2.49"
+    implementation "androidx.compose.material:material:1.7.6"
 //
 //    // Firebase
 //    implementation platform("com.google.firebase:firebase-bom:33.1.1")
@@ -97,6 +107,7 @@ dependencies {
     implementation libs.lifecycle.viewmodel.ktx
     implementation libs.navigation.fragment
     implementation libs.navigation.ui
+    implementation libs.core.ktx
     testImplementation libs.junit
     androidTestImplementation libs.ext.junit
     androidTestImplementation libs.espresso.core
