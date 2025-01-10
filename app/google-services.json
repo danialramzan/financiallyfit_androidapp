@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "815556289078",
+    "project_id": "financiallyfit-52b32",
+    "storage_bucket": "financiallyfit-52b32.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:815556289078:android:5f5d994687e3b92211ee97",
+        "android_client_info": {
+          "package_name": "com.danrmzn.financiallyfit"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "815556289078-03297lb6f2d71v5qqqlk7vkvjra120se.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC7KFfBJJ_LgNFQN5BbnaQTXrWXII3eJ5Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "815556289078-03297lb6f2d71v5qqqlk7vkvjra120se.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
