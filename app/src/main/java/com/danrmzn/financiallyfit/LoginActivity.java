@@ -24,17 +24,12 @@ public class LoginActivity extends AppCompatActivity  {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login); // Links the layout to this Activity
 
-        // Initialize Firebase Authentication
+        // init firebase
         mAuth = FirebaseAuth.getInstance();
 
         // Check if user is already logged in
         if (mAuth.getCurrentUser() != null) {
-
-//            for (int i = 0; i < 10; i++) {
-//                Log.e("tag", "********************************");
-//            }
-//            Log.e("tag", mAuth.getCurrentUser().toString());
-            navigateToMain(); // Go to MainActivity if logged in
+            navigateToMain();
         }
 
         // Get references to input fields and button
@@ -73,62 +68,31 @@ public class LoginActivity extends AppCompatActivity  {
 
         // google sign in button
 
-//        googleButton.setOnClickListener(view -> {
-//
-//            // Sign in the user using Firebase Authentication
-//            mAuth.signInWithEmailAndPassword(email, password)
-//                    .addOnCompleteListener(task -> {
-//                        if (task.isSuccessful()) {
-//                            navigateToMain(); // Navigate to MainActivity on success
-//                        } else {
-//                            Toast.makeText(this, "Authentication failed: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
-//                        }
-//                    });
-//        });
-
-//        googleButton.setOnClickListener(view -> {
-//            // Sign in with Google
-//            lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START); // Mimic lifecycle for coroutine scope
-//            new Thread(() -> {
-//                boolean isSignInSuccessful = googleAuthClient.signIn();
-//                runOnUiThread(() -> {
-//                    if (isSignInSuccessful) {
-//                        Toast.makeText(this, "Google Sign-In successful", Toast.LENGTH_SHORT).show();
-//                        navigateToMain(); // Navigate to MainActivity
-//                    } else {
-//                        Toast.makeText(this, "Google Sign-In failed", Toast.LENGTH_SHORT).show();
-//                    }
-//                });
-//            }).start();
-//        });
 
         googleButton.setOnClickListener(view -> {
-            // Perform Google Sign-In on a background thread
-
             googleAuthClient = new GoogleAuthClient(getApplicationContext());
 
-
-
-            new Thread(() -> {
-                boolean isSignInSuccessful = googleAuthClient.signIn();
-                runOnUiThread(() -> {
-                    if (isSignInSuccessful) {
-                        Toast.makeText(this, "Google Sign-In successful", Toast.LENGTH_SHORT).show();
-                        Log.wtf("wtf", "EXECUTED!");
+            googleAuthClient.signIn(new GoogleAuthClient.SignInCallback() {
+                @Override
+                public void onSuccess() {
+                    runOnUiThread(() -> {
+                        Toast.makeText(LoginActivity.this, "Google Sign-In successful", Toast.LENGTH_SHORT).show();
+                        Log.d("GoogleAuth", "Sign-In successful.");
                         navigateToMain(); // Navigate to MainActivity
-                    } else {
-                        Toast.makeText(this, "Google Sign-In failed", Toast.LENGTH_SHORT).show();
-                    }
-                });
-            }).start();
+                    });
+                }
+
+                @Override
+                public void onFailure(String errorMessage) {
+                    runOnUiThread(() -> {
+                        Toast.makeText(LoginActivity.this, "Google Sign-In failed: " + errorMessage, Toast.LENGTH_SHORT).show();
+                        Log.e("GoogleAuth", "Sign-In failed: " + errorMessage);
+                    });
+                }
+            });
         });
+
     }
-
-
-
-
-
-
 
     // Redirect to MainActivity
     private void navigateToMain() {
@@ -136,4 +100,5 @@ public class LoginActivity extends AppCompatActivity  {
         startActivity(intent);
         finish(); // Close LoginActivity so the user cannot go back to it
     }
+
 }

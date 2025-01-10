@@ -38,30 +38,36 @@ public class GoogleAuthClient {
 
     public boolean isSignedIn() {
         if (firebaseAuth.getCurrentUser() != null) {
-            System.out.println(tag + "already signed in");
+            Log.i("skibidi",tag + "already signed in");
             return true;
         }
         return false;
     }
 
-    public boolean signIn() {
+    public interface SignInCallback {
+        void onSuccess();
+        void onFailure(String errorMessage);
+    }
+
+    public void signIn(SignInCallback callback) {
         if (isSignedIn()) {
-            return true;
+            callback.onSuccess();
+            return;
         }
 
         try {
-            buildCredentialRequest();
-            return true;
+            buildCredentialRequest(callback);
         } catch (Exception e) {
-            e.printStackTrace();
-            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-
-            System.out.println(tag + "signIn error: " + e.getMessage());
-            return false;
+            Log.e("skibidi", "Sign-In error: " + e.getMessage());
+            callback.onFailure("Sign-In error: " + e.getMessage());
         }
     }
 
-    private boolean handleSignIn(GetCredentialResponse result) {
+
+    // Handle sign-in result
+
+
+    private void handleSignIn(GetCredentialResponse result, SignInCallback callback) {
         Object credential = result.getCredential();
 
         if (credential instanceof CustomCredential &&
@@ -70,101 +76,44 @@ public class GoogleAuthClient {
             try {
                 GoogleIdTokenCredential tokenCredential = GoogleIdTokenCredential.createFrom(((CustomCredential) credential).getData());
 
-                System.out.println(tag + "name: " + tokenCredential.getDisplayName());
-                System.out.println(tag + "email: " + tokenCredential.getId());
-                System.out.println(tag + "image: " + tokenCredential.getProfilePictureUri());
+                Log.i("skibidi", tag + "name: " + tokenCredential.getDisplayName());
+                Log.i("skibidi", tag + "email: " + tokenCredential.getId());
+                Log.i("skibidi", tag + "image: " + tokenCredential.getProfilePictureUri());
 
                 String idToken = tokenCredential.getIdToken();
 
                 AuthCredential authCredential = GoogleAuthProvider.getCredential(idToken, null);
 
-                // Sign in with the AuthCredential
-
-
-                // val authResult = firebaseAuth.signInWithCredential(authCredential).await()
-                FirebaseAuth.getInstance().signInWithCredential(authCredential);
-
-                // Check if the user is signed in
-                return firebaseAuth.getCurrentUser() != null;
-
-
-
-
-
-//                val authCredential = GoogleAuthProvider.getCredential(
-//                        tokenCredential.idToken, null
-//                )
-//                val authResult = firebaseAuth.signInWithCredential(authCredential).await()
-
-//
-//                FirebaseAuth.getInstance().signInWithCredential(tokenCredential.getIdToken());
-//
-//
-//                FirebaseAuth.getInstance().signInWithCredential(GoogleAuthProvider.getCredential();
-//
-////                FirebaseAuth.getInstance().signInWithCredential(GoogleAuthProvider.getCredential(idToken, null))
-////                        .get();
-//
-//                return firebaseAuth.getCurrentUser() != null;
+                // Sign in with Firebase Authentication
+                firebaseAuth.signInWithCredential(authCredential)
+                        .addOnCompleteListener(task -> {
+                            if (task.isSuccessful()) {
+                                Log.i(tag, "Firebase authentication successful.");
+                                callback.onSuccess(); // Notify success
+                            } else {
+                                Log.e(tag, "Firebase authentication failed: " + task.getException().getMessage());
+                                callback.onFailure("Firebase authentication failed: " + task.getException().getMessage());
+                            }
+                        });
 
             } catch (Exception e) {
-                System.out.println(tag + "GoogleIdTokenParsingException: " + e.getMessage());
+                Log.e("skibidi", tag + "GoogleIdTokenParsingException: " + e.getMessage());
                 if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-                return false;
+                callback.onFailure("Sign-In error: " + e.getMessage());
             }
 
         } else {
-            System.out.println(tag + "credential is not GoogleIdTokenCredential");
-            return false;
+            Log.e("skibidi", tag + "Credential is not GoogleIdTokenCredential");
+            callback.onFailure("Invalid credentials");
         }
     }
 
-//    private GetCredentialResponse buildCredentialRequest() throws Exception {
-//
-//        GetCredentialRequest request = new GetCredentialRequest.Builder()
-//                .addCredentialOption(
-//                        new GetGoogleIdOption.Builder()
-//                                .setFilterByAuthorizedAccounts(false)
-//                                .setServerClientId("xxxxx")
-//                                .setAutoSelectEnabled(false)
-//                                .build()
-//                )
-//                .build();
-//
-//
-//        return credentialManager.getCredentialAsync(
-//                context,
-//                request,
-//                new CancellationSignal(),
-//                Executors.newSingleThreadExecutor(),
-//                new CredentialManagerCallback<GetCredentialResponse, GetCredentialException>() {
-//                    @Override
-//                    public void onResult(GetCredentialResponse result) {
-//                        handleSignIn(result);
-//                    }
-//
-//                    @Override
-//                    public void onError(GetCredentialException e) {
-//                        System.out.println("lol");
-//
-////                        Log.e("Error!");
-////                        handleFailure(e);
-//                    }
-//                }
-//        );
-//
-////        return credentialManager.getCredential(request, this.context);
-//    }
-
-    private void buildCredentialRequest() {
+    public void buildCredentialRequest(SignInCallback callback) {
         GetCredentialRequest request = new GetCredentialRequest.Builder()
                 .addCredentialOption(
                         new GetGoogleIdOption.Builder()
                                 .setFilterByAuthorizedAccounts(false)
-                                .setServerClientId(
-                                        "xxxx"
-//                                        System.getenv("GOOGLE_CLIENT_ID")
-                                )
+                                .setServerClientId("815556289078-03297lb6f2d71v5qqqlk7vkvjra120se.apps.googleusercontent.com")
                                 .setAutoSelectEnabled(false)
                                 .build()
                 )
@@ -179,18 +128,18 @@ public class GoogleAuthClient {
                     @Override
                     public void onResult(GetCredentialResponse result) {
                         // Handle the result here (e.g., sign in the user)
-                        handleSignIn(result);
+                        handleSignIn(result, callback);
                     }
 
                     @Override
                     public void onError(GetCredentialException e) {
                         // Handle the error here
-                        System.err.println("Error fetching credentials: " + e.getMessage());
+                        Log.e("skibidi", "Error fetching credentials: " + e.getMessage());
+                        callback.onFailure("Error fetching credentials: " + e.getMessage());
                     }
                 }
         );
     }
-
 
     public void signOut() {
 
