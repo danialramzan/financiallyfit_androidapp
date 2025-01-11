@@ -70,7 +70,10 @@ public class LoginActivity extends AppCompatActivity  {
 
 
         googleButton.setOnClickListener(view -> {
-            googleAuthClient = new GoogleAuthClient(getApplicationContext());
+            googleAuthClient = new GoogleAuthClient(
+//                  getApplicationContext()
+                    this
+            );
 
             googleAuthClient.signIn(new GoogleAuthClient.SignInCallback() {
                 @Override

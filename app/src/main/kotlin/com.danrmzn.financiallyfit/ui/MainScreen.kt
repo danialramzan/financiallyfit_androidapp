@@ -1,5 +1,6 @@
 package com.danrmzn.financiallyfit.ui
 
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
@@ -20,6 +21,21 @@ import androidx.navigation.compose.rememberNavController
 import com.danrmzn.financiallyfit.GoogleAuthClient
 import com.danrmzn.financiallyfit.LoginActivity
 import com.google.firebase.auth.FirebaseAuth
+
+
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.composed
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.navigation.compose.currentBackStackEntryAsState
+import coil.compose.rememberAsyncImagePainter
+
+//import coil
+
 
 
 // who up singletoning
@@ -45,49 +61,124 @@ fun MainScreen() {
     }
 }
 
+//@Composable
+//fun BottomNavigationBar(navController: NavHostController) {
+//    val currentDestination by navController.currentBackStackEntryAsState()
+//
+//    NavigationBar {
+//        NavigationBarItem(
+//            selected = currentDestination?.destination?.route == "Home",
+//            onClick = {
+//                if (currentDestination?.destination?.route != "Home") {
+//                    navController.navigate("Home")
+//                }
+//            },
+//            label = { Text("Home") },
+//            icon = { Icon(Icons.Default.Home, contentDescription = "Home") }
+//        )
+//        NavigationBarItem(
+//            selected = currentDestination?.destination?.route == "idk",
+//            onClick = {
+//                if (currentDestination?.destination?.route != "idk") {
+//                    navController.navigate("idk")
+//                }
+//            },
+//            label = { Text("idk") },
+//            icon = { Icon(Icons.Default.Info, contentDescription = "idk") }
+//        )
+//        NavigationBarItem(
+//            selected = currentDestination?.destination?.route == "Settings",
+//            onClick = {
+//                if (currentDestination?.destination?.route != "Settings") {
+//                    navController.navigate("Settings")
+//                }
+//            },
+//            label = { Text("Settings") },
+//            icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") }
+//        )
+//    }
+//}
+
+
+
+@SuppressLint("UnrememberedMutableInteractionSource")
 @Composable
 fun BottomNavigationBar(navController: NavHostController) {
-    val currentDestination = navController.currentBackStackEntry?.destination?.route
+    val currentDestination by navController.currentBackStackEntryAsState()
+
+    // Define reusable colorsremember { M
+    val navBarItemColors = NavigationBarItemDefaults.colors(
+        selectedIconColor = MaterialTheme.colorScheme.primary,
+        selectedTextColor = MaterialTheme.colorScheme.primary,
+        indicatorColor = Color.Transparent, // Oval highlight color
+        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+
+
 
     NavigationBar {
         NavigationBarItem(
-            selected = currentDestination == "screen1", // Highlight if on screen1
-            onClick = { navController.navigate("screen1") },
-            label = { Text("Screen 1") },
-            icon = { Icon(Icons.Default.Home, contentDescription = "Screen 1") }
+            selected = currentDestination?.destination?.route == "Home",
+            onClick = {
+                if (currentDestination?.destination?.route != "Home") {
+                    navController.navigate("Home")
+                }
+            },
+            label = { Text("Home") },
+            icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
+            colors = navBarItemColors,
+            modifier = Modifier.padding(horizontal = 8.dp),
+            interactionSource = MutableInteractionSource()
         )
         NavigationBarItem(
-            selected = currentDestination == "screen2", // Highlight if on screen2
-            onClick = { navController.navigate("screen2") },
-            label = { Text("Screen 2") },
-            icon = { Icon(Icons.Default.Settings, contentDescription = "Screen 2") }
+            selected = currentDestination?.destination?.route == "idk",
+            onClick = {
+                if (currentDestination?.destination?.route != "idk") {
+                    navController.navigate("idk")
+                }
+            },
+            label = { Text("idk") },
+            icon = { Icon(Icons.Default.Info, contentDescription = "idk") },
+            colors = navBarItemColors,
+            modifier = Modifier.padding(horizontal = 8.dp),
+            interactionSource = MutableInteractionSource()
         )
         NavigationBarItem(
-            selected = currentDestination == "screen3", // Highlight if on screen3
-            onClick = { navController.navigate("screen3") },
-            label = { Text("Screen 3") },
-            icon = { Icon(Icons.Default.Info, contentDescription = "Screen 3") }
+            selected = currentDestination?.destination?.route == "Settings",
+            onClick = {
+                if (currentDestination?.destination?.route != "Settings") {
+                    navController.navigate("Settings")
+                }
+            },
+            label = { Text("Settings") },
+            icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
+            colors = navBarItemColors,
+            modifier = Modifier.padding(horizontal = 8.dp),
+            interactionSource = MutableInteractionSource()
         )
     }
 }
 
+
+
 @Composable
 fun NavigationGraph(navController: NavHostController) {
-    NavHost(navController = navController, startDestination = "screen1") {
-        composable("screen1") {
+    NavHost(navController = navController, startDestination = "Home") {
+        composable("Home") {
             Screen1()
         }
-        composable("screen2") {
+        composable("idk") {
             Screen2()
         }
-        composable("screen3") {
+        composable("Settings") {
             Screen3()
         }
     }
 }
 
 @Composable
-fun Screen1() {
+fun Screen3() {
     val context = LocalContext.current
     val googleAuthClient = GoogleAuthClient(context)
 
@@ -105,7 +196,17 @@ fun Screen1() {
             Spacer(modifier = Modifier.height(16.dp))
             CURRENTUSER.PROFILE_PICTURE?.let { profilePicture ->
                 // Use an image loading library like Coil or Glide
-                Text(text = "Profile picture available at $profilePicture") // Placeholder
+
+                Image(
+                    painter = rememberAsyncImagePainter(profilePicture),
+                   contentDescription = "Sample Image",
+                    contentScale = ContentScale.Crop, // Adjust to fit or crop the image
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+
+//                Text(text = "Profile picture available at $profilePicture") // Placeholder
+
             } ?: Text(text = "No profile picture available")
             Spacer(modifier = Modifier.height(32.dp))
             Button(
@@ -143,11 +244,11 @@ fun Screen2() {
 }
 
 @Composable
-fun Screen3() {
+fun Screen1() {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        Text(text = "This is Screen 3")
+        Text(text = "This is Screen 1")
     }
 }
