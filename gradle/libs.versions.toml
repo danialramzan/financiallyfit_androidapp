@@ -22,6 +22,7 @@ playServicesAuth = "21.3.0"
 uiToolingPreview = "1.7.6"
 kotlin = "1.9.24"
 coreKtx = "1.15.0"
+firebaseFirestore = "25.1.1"
 
 [libraries]
 androidx-material-icons-extended = { module = "androidx.compose.material:material-icons-extended", version.ref = "materialIconsExtended" }
@@ -50,6 +51,7 @@ navigation-ui = { group = "androidx.navigation", name = "navigation-ui", version
 play-services-auth = { module = "com.google.android.gms:play-services-auth" }
 ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview", version.ref = "uiToolingPreview" }
 core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore", version.ref = "firebaseFirestore" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

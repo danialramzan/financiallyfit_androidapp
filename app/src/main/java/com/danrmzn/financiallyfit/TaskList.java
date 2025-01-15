@@ -1,6 +1,11 @@
 package com.danrmzn.financiallyfit;
 
 
+import android.os.Build;
+import android.os.CountDownTimer;
+
+import androidx.annotation.RequiresApi;
+
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -10,12 +15,30 @@ public class TaskList {
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private final List<Task> tasks;
+    private CountDownTimer countDownTimer;
+    private boolean active;
 
-    public TaskList(double moneyAmount, LocalDateTime startTime, LocalDateTime endTime) {
+
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    public TaskList(double moneyAmount, LocalDateTime startTime, long minutes, long hours) {
         this.moneyAmount = moneyAmount;
         this.startTime = startTime;
-        this.endTime = endTime;
+        this.endTime = startTime.plusHours(hours).plusMinutes(minutes);
         this.tasks = new ArrayList<>();
+        this.countDownTimer =
+                new CountDownTimer(100000,1000) {
+                    @Override
+                    public void onTick(long l) {
+
+                    }
+
+                    @Override
+                    public void onFinish() {
+
+                    }
+                };
+                // GetCountdownTimer.createTimer(startTime, minutes, hours);
+        this.active = true;
     }
 
     public void setMoneyAmount(double moneyAmount) {

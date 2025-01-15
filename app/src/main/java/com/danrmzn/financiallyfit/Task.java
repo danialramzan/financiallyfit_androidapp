@@ -5,12 +5,22 @@ import java.time.LocalDateTime;
 public class Task {
     private String name;
     private TaskType type;
-    private LocalDateTime startTime;
-    private LocalDateTime endTime;
+    private boolean completed;
+    private int reps;
 
-    public Task(String name, TaskType type) {
+    public int getReps() {
+        return reps;
+    }
+
+    public void setReps(int reps) {
+        this.reps = reps;
+    }
+
+    public Task(String name, TaskType type, Integer reps) {
         this.name = name;
         this.type = type;
+        this.completed = false;
+        this.reps = reps;
     }
 
     public String getName() {
@@ -29,9 +39,13 @@ public class Task {
         this.type = type;
     }
 
+    public void setCompletionStatus(boolean status) {
+        this.completed = status;
+    }
+
 
     @Override
     public String toString() {
-        return name + " - " + type.name() + " - Start: " + startTime + " - End: " + endTime;
+        return name + " - " + type.name();
     }
 }

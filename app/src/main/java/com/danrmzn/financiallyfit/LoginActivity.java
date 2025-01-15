@@ -8,10 +8,7 @@ import android.widget.EditText;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.lifecycle.Lifecycle;
 
-import com.danrmzn.financiallyfit.MainActivity;
-import com.danrmzn.financiallyfit.R;
 import com.google.firebase.auth.FirebaseAuth;
 
 public class LoginActivity extends AppCompatActivity  {
@@ -75,7 +72,7 @@ public class LoginActivity extends AppCompatActivity  {
                     this
             );
 
-            googleAuthClient.signIn(new GoogleAuthClient.SignInCallback() {
+            googleAuthClient.signIn(new SignInCallback() {
                 @Override
                 public void onSuccess() {
                     runOnUiThread(() -> {

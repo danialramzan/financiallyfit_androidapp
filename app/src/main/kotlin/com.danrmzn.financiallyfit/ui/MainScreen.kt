@@ -9,6 +9,7 @@ import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
@@ -53,6 +54,7 @@ import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -63,7 +65,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
@@ -74,6 +80,7 @@ import androidx.navigation.compose.rememberNavController
 import coil.compose.rememberAsyncImagePainter
 import com.danrmzn.financiallyfit.GoogleAuthClient
 import com.danrmzn.financiallyfit.LoginActivity
+import com.danrmzn.financiallyfit.Task
 import com.danrmzn.financiallyfit.TaskList
 import com.danrmzn.financiallyfit.TaskType
 import com.google.firebase.auth.FirebaseAuth
@@ -187,67 +194,6 @@ fun NavigationGraph(navController: NavHostController) {
         }
     }
 }
-
-@Composable
-fun Screen3() {
-    val context = LocalContext.current
-    val googleAuthClient = GoogleAuthClient(context)
-
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Text(text = "Welcome, ${CURRENTUSER.NAME}!", style = MaterialTheme.typography.headlineMedium)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text = "Email: ${CURRENTUSER.EMAIL}", style = MaterialTheme.typography.bodyMedium)
-            Spacer(modifier = Modifier.height(16.dp))
-            CURRENTUSER.PROFILE_PICTURE?.let { profilePicture ->
-                // Use an image loading library like Coil or Glide
-
-                Image(
-                    painter = rememberAsyncImagePainter(profilePicture),
-                   contentDescription = "Sample Image",
-                    contentScale = ContentScale.Crop, // Adjust to fit or crop the image
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-
-//                Text(text = "Profile picture available at $profilePicture") // Placeholder
-
-            } ?: Text(text = "No profile picture available")
-            Spacer(modifier = Modifier.height(32.dp))
-            Button(
-                onClick = {
-                    googleAuthClient.signOut()
-                    Toast.makeText(context,
-                            "Successfully Logged out!",
-                            Toast.LENGTH_SHORT).show()
-
-                    // Optionally navigate to a login screen
-                    // For example: navController.navigate("login_screen")
-                    val intent = Intent(context, LoginActivity::class.java)
-
-                    // adds the value of flags (bitwise or)
-                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK // Clear back stack
-                    context.startActivity(intent)
-
-                }
-            ) {
-                Text("Log Out")
-            }
-        }
-
-    }
-}
-
-
-
-
-
 
 
 @Composable
@@ -490,11 +436,15 @@ fun AddTaskScreen(navController: NavController) {
     var minutes by remember { mutableStateOf("") }
     var moneyAmount by remember { mutableStateOf("") }
     var taskList by remember { mutableStateOf<TaskList?>(null) } // TaskList starts as null
+    val repOptions = (1..100).map { it.toString() } // Options for reps (1-100)
+    var selectedReps by remember { mutableStateOf("") }
 
 
     var expandedHours by remember { mutableStateOf(false) }
     var expandedMinutes by remember { mutableStateOf(false) }
-    val hourOptions = (0..23).map { it.toString().padStart(2, '0') }
+    var repsDropdownVisible by remember { mutableStateOf(false) }
+    val temporaryTaskList = remember { mutableStateListOf<Task>() }
+    val hourOptions = (0..24).map { it.toString().padStart(2, '0') }
     val minuteOptions = (0..59).map { it.toString().padStart(2, '0') }
 
 
@@ -512,10 +462,55 @@ fun AddTaskScreen(navController: NavController) {
             )
         }
 
+        // Temporary Task List Display
+        if (temporaryTaskList.isNotEmpty()) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp)
+                        .border(1.dp, MaterialTheme.colorScheme.surfaceVariant)
+                        .padding(8.dp)
+                ) {
+                    Column {
+                        // Heading for the Task List
+                        Text(
+                            text = "Task List:",
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(bottom = 8.dp) // Space below the heading
+                        )
+
+                        // Display Each Task Below the Heading
+                        temporaryTaskList.forEach { task ->
+                            if (task.type == TaskType.valueOf("Reps")) {
+                                Text(
+                                    text = buildAnnotatedString {
+                                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                                            append("${task.reps}x ") // Bold reps count
+                                        }
+                                        append(task.name) // Task name
+                                    },
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.padding(bottom = 4.dp) // Space between tasks
+                                )
+                            } else {
+                                Text(
+                                    text = task.name,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.padding(bottom = 4.dp) // Space between tasks
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+
         if (taskList == null) {
             // Inputs for adding tasks and setting money
 
-            // Dropdown for Task Type
+            // TASK TYPE DROPDOWN>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
             item {
                 var expanded by remember { mutableStateOf(false) }
                 Box {
@@ -543,14 +538,6 @@ fun AddTaskScreen(navController: NavController) {
                             }
                         }
                     )
-
-
-
-
-
-
-
-
                     DropdownMenu(
                         expanded = expanded,
                         onDismissRequest = { expanded = false }
@@ -561,6 +548,7 @@ fun AddTaskScreen(navController: NavController) {
                                 onClick = {
                                     selectedOption = option.name
                                     expanded = false
+                                    repsDropdownVisible = option.name == "Reps"
                                 }
                             )
                         }
@@ -568,8 +556,55 @@ fun AddTaskScreen(navController: NavController) {
                 }
                 Spacer(modifier = Modifier.height(8.dp))
             }
+            // TASK TYPE DROPDOWN END>>>>>>>>>>>>>>>
 
-//            if
+            if (repsDropdownVisible) {
+                item {
+                    var repsExpanded by remember { mutableStateOf(false) }
+
+                    Box {
+                        OutlinedTextField(
+                            value = selectedReps,
+                            onValueChange = {},
+                            label = { Text("Number of Reps") },
+                            readOnly = true,
+                            interactionSource = remember { MutableInteractionSource() }
+                                .also { interactionSource ->
+                                    LaunchedEffect(interactionSource) {
+                                        interactionSource.interactions.collect {
+                                            if (it is PressInteraction.Release) {
+                                                repsExpanded = !repsExpanded
+                                            }
+                                        }
+                                    }
+                                },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { repsExpanded = !repsExpanded },
+                            trailingIcon = {
+                                IconButton(onClick = { repsExpanded = !repsExpanded }) {
+                                    Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                                }
+                            }
+                        )
+                        DropdownMenu(
+                            expanded = repsExpanded,
+                            onDismissRequest = { repsExpanded = false }
+                        ) {
+                            repOptions.forEach { reps ->
+                                DropdownMenuItem(
+                                    text = { Text(reps) },
+                                    onClick = {
+                                        selectedReps = reps
+                                        repsExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
 
 
             // Task Name Input
@@ -584,117 +619,211 @@ fun AddTaskScreen(navController: NavController) {
             }
 
 
+
+            // SHALL BE MNOVED TO NEXT SCREEN
+
+//            item {
+//                // Explanation for Hours and Minutes
+//                Text(
+//                    text = "Set how much time you are willing to give yourself to complete the task.",
+//                    style = MaterialTheme.typography.bodyMedium,
+//                    modifier = Modifier.padding(bottom = 8.dp, top = 8.dp)
+//                )
+//            }
+
+//            item {
+//                Row(
+//                    modifier = Modifier
+//                        .fillMaxWidth(),
+//                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+//                ) {
+//                    // Hours Dropdown
+//                    Box(modifier = Modifier.weight(1f)) {
+//                        OutlinedTextField(
+//                            value = hours,
+//                            onValueChange = {},
+//                            label = { Text("HH") },
+//                            readOnly = true,
+//                            interactionSource = remember { MutableInteractionSource() }
+//                                .also { interactionSource ->
+//                                    LaunchedEffect(interactionSource) {
+//                                        interactionSource.interactions.collect {
+//                                            if (it is PressInteraction.Release) {
+//                                                expandedHours = !expandedHours
+//                                            }
+//                                        }
+//                                    }
+//                                },
+//                            modifier = Modifier
+//                                .fillMaxWidth()
+//                                .clickable { expandedHours = true },
+//                            trailingIcon = {
+//                                IconButton(onClick = { expandedHours = true }) {
+//                                    Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+//                                }
+//                            }
+//                        )
+//                        DropdownMenu(
+//                            expanded = expandedHours,
+//                            onDismissRequest = { expandedHours = false }
+//                        ) {
+//                            hourOptions.forEach { option ->
+//                                DropdownMenuItem(
+//                                    text = { Text(option) },
+//                                    onClick = {
+//                                        hours = option
+//                                        expandedHours = false
+//                                    }
+//                                )
+//                            }
+//                        }
+//                    }
+//
+//                    // Colon Separator
+//                    Text(":", modifier = Modifier.align(Alignment.CenterVertically))
+//
+//                    // Minutes Dropdown
+//                    Box(modifier = Modifier.weight(1f)) {
+//                        OutlinedTextField(
+//                            value = minutes,
+//                            onValueChange = {},
+//                            label = { Text("MM") },
+//                            readOnly = true,
+//                            interactionSource = remember { MutableInteractionSource() }
+//                                .also { interactionSource ->
+//                                    LaunchedEffect(interactionSource) {
+//                                        interactionSource.interactions.collect {
+//                                            if (it is PressInteraction.Release) {
+//                                                expandedMinutes = !expandedMinutes
+//                                            }
+//                                        }
+//                                    }
+//                                },
+//                            modifier = Modifier
+//                                .fillMaxWidth()
+//                                .clickable { expandedMinutes = true },
+//                            trailingIcon = {
+//                                IconButton(onClick = { expandedMinutes = true }) {
+//                                    Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+//                                }
+//                            }
+//                        )
+//                        DropdownMenu(
+//                            expanded = expandedMinutes,
+//                            onDismissRequest = { expandedMinutes = false }
+//                        ) {
+//                            minuteOptions.forEach { option ->
+//                                DropdownMenuItem(
+//                                    text = { Text(option) },
+//                                    onClick = {
+//                                        minutes = option
+//                                        expandedMinutes = false
+//                                    }
+//                                )
+//                            }
+//                        }
+//                    }
+//                }
+//            }
+
+
+
+
+//
+//            // Add Task Button
+//            item {
+//                Box(
+//                    modifier = Modifier
+//                        .fillMaxWidth()
+//                        .padding(vertical = 16.dp), // Adjust padding as needed
+//                    contentAlignment = Alignment.Center
+//                ) {
+//                    Column(
+//                        horizontalAlignment = Alignment.CenterHorizontally
+//                    ) {
+//                        Button(onClick = {
+//                            if (taskName.isNotBlank()) {
+//                                println("Task Added: $taskName, $selectedOption")
+//                            }
+//                        }) {
+//                            Text("Add Task")
+//                        }
+//                        Spacer(modifier = Modifier.height(20.dp))
+//                    }
+//                }
+//            }
+
             item {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        .padding(top = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // Hours Dropdown
-                    Box(modifier = Modifier.weight(1f)) {
-                        OutlinedTextField(
-                            value = hours,
-                            onValueChange = {},
-                            label = { Text("HH") },
-                            readOnly = true,
-                            modifier = Modifier.fillMaxWidth().clickable { expandedHours = true },
-                            trailingIcon = {
-                                Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                    // Add Task Button
+                    Button(
+                        onClick = {
+                            if (taskName.isNotBlank() && selectedOption.isNotBlank()) {
+                                val taskType = TaskType.valueOf(selectedOption)
+                                if (selectedOption == "None") {
+                                    temporaryTaskList.add(Task(taskName, taskType, 0))
+                                } else {
+                                    temporaryTaskList.add(Task(taskName, taskType, selectedReps.toInt()))
+                                }
+                                taskName = ""
+                                selectedOption = ""
+                                repsDropdownVisible = false
                             }
-                        )
-                        DropdownMenu(
-                            expanded = expandedHours,
-                            onDismissRequest = { expandedHours = false }
-                        ) {
-                            hourOptions.forEach { option ->
-                                DropdownMenuItem(
-                                    text = { Text(option) },
-                                    onClick = {
-                                        hours = option
-                                        expandedHours = false
-                                    }
-                                )
-                            }
-                        }
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Add Task")
                     }
 
-                    // Colon Separator
-                    Text(":", modifier = Modifier.align(Alignment.CenterVertically))
+                    Spacer(modifier = Modifier.width(20.dp))
 
-                    // Minutes Dropdown
-                    Box(modifier = Modifier.weight(1f)) {
-                        OutlinedTextField(
-                            value = minutes,
-                            onValueChange = {},
-                            label = { Text("MM") },
-                            readOnly = true,
-                            modifier = Modifier.fillMaxWidth().clickable { expandedMinutes = true },
-                            trailingIcon = {
-                                Icon(Icons.Default.ArrowDropDown, contentDescription = null)
-                            }
-                        )
-                        DropdownMenu(
-                            expanded = expandedMinutes,
-                            onDismissRequest = { expandedMinutes = false }
-                        ) {
-                            minuteOptions.forEach { option ->
-                                DropdownMenuItem(
-                                    text = { Text(option) },
-                                    onClick = {
-                                        minutes = option
-                                        expandedMinutes = false
-                                    }
-                                )
-                            }
-                        }
+                    // Commit Button
+                    Button(
+                        onClick = {
+                            println("Tasks committed: $temporaryTaskList")
+                            temporaryTaskList.clear()
+                        },
+                        modifier = Modifier.weight(1f),
+                        enabled = temporaryTaskList.isNotEmpty()
+                    ) {
+                        Text("Commit")
                     }
                 }
             }
 
 
-
-
-            // Add Task Button
-            item {
-                Button(onClick = {
-
-                    if (taskName.isNotBlank()) {
-                        println("Task Added: $taskName, $selectedOption")
-                    }
-                }) {
-                    Text("Add Task")
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-
-            // Money Input for TaskList
-            item {
-                OutlinedTextField(
-                    value = moneyAmount,
-                    onValueChange = { moneyAmount = it },
-                    label = { Text("Total Amount (Money)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-
-            // Commit Button
-            item {
-                Button(onClick = {
-                    val amount = moneyAmount.toDoubleOrNull() ?: 0.0
-                    taskList = TaskList(amount,
-                        LocalDateTime.now(),
-                        LocalDateTime.now()).apply {
-//                        setMoneyAmount(amount)
-                        // Populate tasks if needed
-                    }
-                }) {
-                    Text("Commit")
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-            }
+//            // Money Input for TaskList
+//            item {
+//                OutlinedTextField(
+//                    value = moneyAmount,
+//                    onValueChange = { moneyAmount = it },
+//                    label = { Text("Total Amount (Money)") },
+//                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+//                    modifier = Modifier.fillMaxWidth()
+//                )
+//                Spacer(modifier = Modifier.height(16.dp))
+//            }
+//
+//            // Commit Button
+//            item {
+//                Button(onClick = {
+//                    val amount = moneyAmount.toDoubleOrNull() ?: 0.0
+//                    taskList = TaskList(amount,
+//                        LocalDateTime.now(),
+//                        10,10).apply {
+////                        setMoneyAmount(amount)
+//                        // Populate tasks if needed
+//                    }
+//                }) {
+//                    Text("Commit")
+//                }
+//                Spacer(modifier = Modifier.height(16.dp))
+//            }
         } else {
             // TaskList is committed, display its content
             item {
@@ -714,137 +843,4 @@ fun AddTaskScreen(navController: NavController) {
     }
 }
 
-
-
-//@Composable
-//fun AddTaskScreen(navController: NavController) {
-//
-//    var taskName by remember { mutableStateOf("") }
-//    var selectedOption by remember { mutableStateOf("None") }
-//    val taskOptions = listOf("Reps", "Time", "None")
-//    val taskList = remember { mutableStateListOf<Pair<String, String>>() }
-//    var moneyAmount by remember { mutableStateOf("") }
-//
-//    Column(
-//        modifier = Modifier
-//            .fillMaxSize()
-//            .padding(16.dp)
-//            .verticalScroll(rememberScrollState())
-//    ) {
-//        Text(
-//            text = "Add Tasks",
-//            style = MaterialTheme.typography.headlineMedium,
-//            modifier = Modifier.padding(bottom = 16.dp)
-//        )
-//
-//        // Task Name Input
-//        OutlinedTextField(
-//            value = taskName,
-//            onValueChange = { taskName = it },
-//            label = { Text("Task Name") },
-//            modifier = Modifier.fillMaxWidth()
-//        )
-//
-//        Spacer(modifier = Modifier.height(8.dp))
-//
-//        // Dropdown for Task Type
-//        var expanded by remember { mutableStateOf(false) }
-//        Box {
-//            OutlinedTextField(
-//                value = selectedOption,
-//                onValueChange = {},
-//                label = { Text("Task Type") },
-//                readOnly = true,
-//                modifier = Modifier.fillMaxWidth(),
-//                trailingIcon = {
-//                    IconButton(onClick = { expanded = !expanded }) {
-//                        Icon(Icons.Default.ArrowDropDown, contentDescription = null)
-//                    }
-//                }
-//            )
-//            DropdownMenu(
-//                expanded = expanded,
-//                onDismissRequest = { expanded = false }
-//            ) {
-//                taskOptions.forEach { option ->
-////                    DropdownMenuItem(
-////                        onClick = {
-////                            selectedOption = option
-////                            expanded = false
-////                        }
-////                    )
-//
-//                    DropdownMenu(
-//                        expanded = expanded,
-//                        onDismissRequest = { expanded = false }
-//                    ) {
-//                        taskOptions.forEach { option ->
-//                            DropdownMenuItem(
-//                                text = { Text(option) }, // Pass Text(option) as the text parameter
-//                                onClick = {
-//                                    selectedOption = option
-//                                    expanded = false
-//                                },
-//                                modifier = Modifier.padding(8.dp),
-//                                leadingIcon = { Icon(Icons.Default.Check, contentDescription = null) },
-//                                trailingIcon = { Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null) },
-//                                enabled = true,
-//                                colors = MenuDefaults.itemColors(),
-//                                contentPadding = PaddingValues(horizontal = 16.dp),
-//                                interactionSource = remember { MutableInteractionSource() }
-//                            )
-//                        }
-//                    }
-//                }
-//            }
-//
-//        }
-//
-//        Spacer(modifier = Modifier.height(8.dp))
-//
-//        // Add Task Button
-//        Button(onClick = {
-//            if (taskName.isNotBlank()) {
-//                taskList.add(taskName to selectedOption)
-//                taskName = ""
-//                selectedOption = "None"
-//            }
-//        }) {
-//            Text("Add Task")
-//        }
-//
-//        Spacer(modifier = Modifier.height(16.dp))
-//
-//        // Display Added Tasks
-//        LazyColumn {
-//            items(taskList) { task -> // Convert SnapshotStateList to a List
-//                Text("${task.first} - ${task.second}") // Use string interpolation to display the task
-//            }
-//        }
-//
-//
-//        Spacer(modifier = Modifier.height(16.dp))
-//
-//        // Money Input
-//        OutlinedTextField(
-//            value = moneyAmount,
-//            onValueChange = { moneyAmount = it },
-//            label = { Text("Enter Amount (Money)") },
-//            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-//            modifier = Modifier.fillMaxWidth()
-//        )
-//
-//        Spacer(modifier = Modifier.height(16.dp))
-//
-//        // Commit Button
-//        Button(
-//            onClick = {
-//                // Commit logic here
-//            },
-//            modifier = Modifier.align(Alignment.CenterHorizontally)
-//        ) {
-//            Text("Commit")
-//        }
-//    }
-//}
 
