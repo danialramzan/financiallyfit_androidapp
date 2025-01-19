@@ -211,7 +211,7 @@ fun AddTaskScreen(navController: NavController) {
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                 }
-                // TASK TYPE DROPDOWN END>>>>>>>>>>>>>>>
+                // TASK TYPE DROPDOWN END>>>>>>>>>>>>>>
 
                 if (repsDropdownVisible) {
                     item {
