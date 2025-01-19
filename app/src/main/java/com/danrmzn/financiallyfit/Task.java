@@ -1,7 +1,5 @@
 package com.danrmzn.financiallyfit;
 
-import java.time.LocalDateTime;
-
 public class Task {
     private String name;
     private TaskType type;
