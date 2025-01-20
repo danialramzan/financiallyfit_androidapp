@@ -18,10 +18,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -30,6 +33,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -48,11 +52,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import com.danrmzn.financiallyfit.Task
 import com.danrmzn.financiallyfit.TaskList
 import com.danrmzn.financiallyfit.TaskType
 import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -70,6 +77,8 @@ fun AddTaskScreen(navController: NavController) {
     var expandedHours by rememberSaveable { mutableStateOf(false) }
     var expandedMinutes by rememberSaveable { mutableStateOf(false) }
     var repsDropdownVisible by rememberSaveable { mutableStateOf(false) }
+    var isDialogOpen by rememberSaveable { mutableStateOf(false) }
+
 
 
 
@@ -617,7 +626,7 @@ fun AddTaskScreen(navController: NavController) {
                     Button(
                         onClick = {
 //                            println("Tasks committed: $temporaryTaskList")
-//                            commit = true
+                            isDialogOpen = true
                         },
                         modifier = Modifier.weight(1f),
                         enabled = isValidTaskInput(moneyAmount, hours, minutes),
@@ -627,27 +636,204 @@ fun AddTaskScreen(navController: NavController) {
                 }
             }
 
-            if (isValidTaskInput(moneyAmount, hours, minutes)) {
 
                 item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 8.dp)
-                            .border(1.dp, MaterialTheme.colorScheme.surfaceVariant)
-                            .padding(8.dp)
-                    ) {
-                        Text(
-                            text = "REPLACE THIS WITH DIALOG",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(bottom = 8.dp) // Space below the tagline
-                        )
 
+
+                    // allegedly good code
+
+//                    if (isDialogOpen) {
+//                        Dialog(onDismissRequest = { onDismissRequest() }) {
+//                            Box(
+//                                modifier = Modifier
+//                                    .fillMaxWidth()
+//                                    .padding(16.dp)
+//                                    .background(
+//                                        color = MaterialTheme.colorScheme.background,
+//                                        shape = RoundedCornerShape(8.dp)
+//                                    )
+//                                    .padding(16.dp) // Inner padding
+//                            ) {
+//                                Column(
+//                                    modifier = Modifier
+//                                        .verticalScroll(rememberScrollState()) // Enable scrolling for overflow
+//                                ) {
+//                                    // Title
+//                                    Text(
+//                                        text = "Confirm Payment and Start Task",
+//                                        style = MaterialTheme.typography.headlineSmall,
+//                                        modifier = Modifier.padding(bottom = 8.dp)
+//                                    )
+//
+//                                    // Display the total amount of money
+//                                    Text(text = "Amount: $$moneyAmount")
+//
+//                                    Spacer(modifier = Modifier.height(8.dp))
+//
+//                                    // Calculate start and end times using LocalTime
+//                                    val currentTime = LocalDateTime.now()
+//                                    val startTime = currentTime.plusMinutes(5)
+//                                    val endTime = startTime.plusMinutes(hours.toLong() * 60 + minutes.toLong())
+//                                    val formatter = DateTimeFormatter.ofPattern("MMMM d, yyyy h:mm a")
+//                                    val formattedStartTime = startTime.format(formatter)
+//                                    val formattedEndTime = endTime.format(formatter)
+//
+//                                    // Show the estimated start time and end time
+//                                    Text(text = "Estimated start time: $formattedStartTime")
+//                                    Text(text = "Estimated end time: $formattedEndTime")
+//
+//                                    Spacer(modifier = Modifier.height(8.dp))
+//
+//                                    // Inform the user about task start and preauthorization
+//                                    Text(
+//                                        text = "The time to do your task will start as soon as payment is pre-authorized. " +
+//                                                "The above times are given for reference only and assume payment is pre-authorized in 5 minutes from now."
+//                                    )
+//
+//                                    Spacer(modifier = Modifier.height(16.dp))
+//
+//                                    // Display the task list
+//                                    Text(text = "Tasks to complete:")
+//                                    temporaryTaskList.forEach { task ->
+//                                        if (task.type == TaskType.valueOf("Reps")) {
+//                                            Text(
+//                                                text = buildAnnotatedString {
+//                                                    withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+//                                                        append("${task.reps}x ") // Bold reps count
+//                                                    }
+//                                                    append(task.name) // Task name
+//                                                },
+//                                                style = MaterialTheme.typography.bodyMedium,
+//                                                modifier = Modifier.padding(bottom = 4.dp)
+//                                            )
+//                                        } else {
+//                                            Text(
+//                                                text = task.name,
+//                                                style = MaterialTheme.typography.bodyMedium,
+//                                                modifier = Modifier.padding(bottom = 4.dp)
+//                                            )
+//                                        }
+//                                    }
+//
+//                                    Spacer(modifier = Modifier.height(16.dp))
+//
+//                                    // Buttons Row
+//                                    Row(
+//                                        horizontalArrangement = Arrangement.End,
+//                                        modifier = Modifier.fillMaxWidth()
+//                                    ) {
+//                                        TextButton(onClick = { onDismissRequest() }) {
+//                                            Text("Cancel")
+//                                        }
+//                                        Spacer(modifier = Modifier.width(8.dp))
+//                                        TextButton(onClick = {
+//                                            println("Navigating to payment...")
+//                                            onDismissRequest()
+//                                        }) {
+//                                            Text("Confirm")
+//                                        }
+//                                    }
+//                                }
+//                            }
+//                        }
+
+
+
+
+                    if (isDialogOpen) {
+                        AlertDialog(
+                            onDismissRequest = { isDialogOpen = false },
+                            title = {
+                                Text(text = "Confirm Payment and Start Task")
+                            },
+                            text = {
+                                Column (
+                                    modifier = Modifier
+                                        .verticalScroll(rememberScrollState()) // Add scrolling capability
+                                        .padding(vertical = 8.dp)
+//                                        .weight(weight = 1f, fill = false)
+                                ) {
+                                    // Display the total amount of money
+                                    Text(text = "Amount: $$moneyAmount")
+
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+
+
+                                    // Calculate start and end times using LocalTime
+                                    val currentTime = LocalDateTime.now()
+                                    val startTime = currentTime.plusMinutes(5)
+                                    val endTime = startTime.plusMinutes(hours.toLong() * 60 + minutes.toLong())
+                                    val formatter = DateTimeFormatter.ofPattern("MMMM d, yyyy h:mm a")
+                                    val formattedStartTime = startTime.format(formatter)
+                                    val formattedEndTime = endTime.format(formatter)
+
+                                    // Show the estimated start time and end time
+                                    Text(text = "Estimated start time: $formattedStartTime")
+                                    Text(text = "Estimated end time: $formattedEndTime")
+
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    Text(
+                                        text = "The time to do your task will start as soon as payment is pre-authorized. " +
+                                                "The above times give are given for reference only and assume payment is pre-authorized in 5 minutes from now."
+                                    )
+
+
+
+
+
+
+
+
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    // Inform the user about task start and preauthorization
+
+                                    Spacer(modifier = Modifier.height(16.dp))
+
+                                    // Display the task list
+//                                    Text(text = "Tasks to complete:")
+//                                    temporaryTaskList.forEach { task ->
+//                                        if (task.type == TaskType.valueOf("Reps")) {
+//                                            Text(
+//                                                text = buildAnnotatedString {
+//                                                    withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+//                                                        append("${task.reps}x ") // Bold reps count
+//                                                    }
+//                                                    append(task.name) // Task name
+//                                                },
+//                                                style = MaterialTheme.typography.bodyMedium,
+//                                                modifier = Modifier.padding(bottom = 4.dp) // Space between tasks
+//                                            )
+//                                        } else {
+//                                            Text(
+//                                                text = task.name,
+//                                                style = MaterialTheme.typography.bodyMedium,
+//                                                modifier = Modifier.padding(bottom = 4.dp) // Space between tasks
+//                                            )
+//                                        }
+//                                    }
+                                }
+                            },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    // Navigate to payment or perform payment logic
+                                    isDialogOpen = false
+                                    println("Navigating to payment...")
+                                }) {
+                                    Text("Confirm and Proceed to Payment")
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { isDialogOpen = false }) {
+                                    Text("Cancel")
+                                }
+                            }
+                        )
+                    }
                     }
                 }
-
-            }
-            }
     }
 }
 
