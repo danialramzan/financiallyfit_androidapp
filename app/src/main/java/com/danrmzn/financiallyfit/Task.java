@@ -1,10 +1,24 @@
 package com.danrmzn.financiallyfit;
 
-public class Task {
+import java.io.Serializable;
+
+public class Task implements Serializable {
     private String name;
     private TaskType type;
+
+    public boolean isCompleted() {
+        return completed;
+    }
+
+    public void setCompleted(boolean completed) {
+        this.completed = completed;
+    }
+
     private boolean completed;
     private int reps;
+
+    private static final long serialVersionUID = 1L;
+
 
     public int getReps() {
         return reps;

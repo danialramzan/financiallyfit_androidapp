@@ -36,7 +36,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.SpanStyle
@@ -54,23 +57,71 @@ import java.time.LocalDateTime
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun AddTaskScreen(navController: NavController) {
-    var taskName by remember { mutableStateOf("") }
-    var selectedOption by remember { mutableStateOf(TaskType.None.name) }
-    var hours by remember { mutableStateOf("") }
-    var minutes by remember { mutableStateOf("") }
-    var moneyAmount by remember { mutableStateOf("") }
-    var taskList by remember { mutableStateOf<TaskList?>(null) } // TaskList starts as null
+    var taskName by rememberSaveable { mutableStateOf("") }
+    var selectedOption by rememberSaveable { mutableStateOf(TaskType.None.name) }
+    var hours by rememberSaveable { mutableStateOf("") }
+    var minutes by rememberSaveable { mutableStateOf("") }
+    var moneyAmount by rememberSaveable { mutableStateOf("") }
+    var taskList by rememberSaveable { mutableStateOf<TaskList?>(null) } // TaskList starts as null
     val repOptions = (1..100).map { it.toString() } // Options for reps (1-100)
-    var selectedReps by remember { mutableStateOf("") }
+    var selectedReps by rememberSaveable { mutableStateOf("") }
 
 
-    var expandedHours by remember { mutableStateOf(false) }
-    var expandedMinutes by remember { mutableStateOf(false) }
-    var repsDropdownVisible by remember { mutableStateOf(false) }
-    val temporaryTaskList = remember { mutableStateListOf<Task>() }
+    var expandedHours by rememberSaveable { mutableStateOf(false) }
+    var expandedMinutes by rememberSaveable { mutableStateOf(false) }
+    var repsDropdownVisible by rememberSaveable { mutableStateOf(false) }
+
+
+
+
+//    val temporaryTaskList = rememberSaveable { mutableStateListOf<Task>() }
+
+//    val temporaryTaskList = rememberSaveable(
+//        saver = Saver<SnapshotStateList<Task>, List<Task>>(
+//            save = { it.toList() },
+//            restore = { SnapshotStateList<Task>().apply { addAll(it) } }
+//        )
+//    ) {
+//        mutableStateListOf<Task>()
+//    }
+
+    val temporaryTaskList = rememberSaveable(
+        saver = Saver<SnapshotStateList<Task>, List<Map<String, Any>>>(
+            save = { list ->
+                list.map { task ->
+                    mapOf(
+                        "name" to task.getName(),
+                        "type" to task.getType().name,
+                        "completed" to task.isCompleted(),
+                        "reps" to task.getReps()
+                    )
+                }
+            },
+            restore = { savedList ->
+                SnapshotStateList<Task>().apply {
+                    addAll(
+                        savedList.map { map ->
+                            Task(
+                                map["name"] as String,
+                                TaskType.valueOf(map["type"] as String),
+                                (map["reps"] as Number).toInt()
+                            ).apply {
+                                setCompletionStatus(map["completed"] as Boolean)
+                            }
+                        }
+                    )
+                }
+            }
+        )
+    ) {
+        mutableStateListOf<Task>()
+    }
+
+
+
     val hourOptions = (0..24).map { it.toString().padStart(2, '0') }
     val minuteOptions = (0..59).map { it.toString().padStart(2, '0') }
-    var commit by remember { mutableStateOf(false) }
+    var commit by rememberSaveable { mutableStateOf(false) }
 
     if (!commit) {
 
@@ -338,9 +389,59 @@ fun AddTaskScreen(navController: NavController) {
                 .padding(16.dp)
         ) {
 
+            // TaskList is committed, display its content
+            item {
+//                Text("Task List Committed!")
 
 
+                // Temporary Task List Display
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp)
+                                .border(1.dp, MaterialTheme.colorScheme.surfaceVariant)
+                                .padding(8.dp)
+                        ) {
+                            Column {
+                                // Heading for the Task List
+                                Text(
+                                    text = "Current Task List:",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    modifier = Modifier.padding(bottom = 8.dp) // Space below the heading
+                                )
 
+                                // Display Each Task Below the Heading
+                                temporaryTaskList.forEach { task ->
+                                    if (task.type == TaskType.valueOf("Reps")) {
+                                        Text(
+                                            text = buildAnnotatedString {
+                                                withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                                                    append("${task.reps}x ") // Bold reps count
+                                                }
+                                                append(task.name) // Task name
+                                            },
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            modifier = Modifier.padding(bottom = 4.dp) // Space between tasks
+                                        )
+                                    } else {
+                                        Text(
+                                            text = task.name,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            modifier = Modifier.padding(bottom = 4.dp) // Space between tasks
+                                        )
+                                    }
+                            }
+
+                        }
+
+                }
+                Text(
+                    text = "Click 'Go Back' if you need to edit tasks.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp) // Space below the tagline
+                )
+            }
             //            // Money Input for TaskList
             item {
                 OutlinedTextField(
@@ -350,51 +451,42 @@ fun AddTaskScreen(navController: NavController) {
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-
-            // Commit Button
-            item {
-                Button(onClick = {
-                    val amount = moneyAmount.toDoubleOrNull() ?: 0.0
-                    taskList = TaskList(amount,
-                        LocalDateTime.now(),
-                        10,10).apply {
-//                        setMoneyAmount(amount)
-                        // Populate tasks if needed
-                    }
-                }) {
-                    Text("Commit")
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-            // TaskList is committed, display its content
-            item {
-                Text("Task List Committed!")
-                Text(taskList.toString())
-            }
-
-            // Option to navigate back or perform further actions
-            item {
-                Button(onClick = {
-                    navController.popBackStack() // Navigate back
-                }) {
-                    Text("Go Back")
-                }
-            }
-
-
-
-
-
-            item {
-                // Explanation for Hours and Minutes
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Set how much time you are willing to give yourself to complete the task.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(bottom = 8.dp, top = 8.dp)
+                    text = "Enter the amount of money you are willing to put up.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp) // Space below the tagline
                 )
             }
+
+//            // Commit Button
+//            item {
+//                Button(onClick = {
+//                    val amount = moneyAmount.toDoubleOrNull() ?: 0.0
+//                    taskList = TaskList(amount,
+//                        LocalDateTime.now(),
+//                        10,10).apply {
+////                        setMoneyAmount(amount)
+//                        // Populate tasks if needed
+//                    }
+//                }) {
+//                    Text("Commit")
+//                }
+//                Spacer(modifier = Modifier.height(16.dp))
+//            }
+//
+//            // Option to navigate back or perform further actions
+//            item {
+//                Button(onClick = {
+//                    commit = false
+//                }
+//                ) {
+//                    Text("Go Back")
+//                }
+//            }
+
+
 
             item {
                 Row(
@@ -489,7 +581,83 @@ fun AddTaskScreen(navController: NavController) {
                         }
                     }
                 }
+                Spacer(modifier = Modifier.height(8.dp))
+
+
+                Text(
+                    text = "Set how much time you are willing to give yourself to complete the task (minimum amount is 30 minutes).",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp) // Space below the tagline
+                )
+
+            }
+
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    // Add Task Button
+                    Button(
+                        onClick = {
+                            commit = false
+                        }
+                        ,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Go Back")
+                    }
+
+                    Spacer(modifier = Modifier.width(20.dp))
+
+                    // Commit Button
+                    Button(
+                        onClick = {
+//                            println("Tasks committed: $temporaryTaskList")
+//                            commit = true
+                        },
+                        modifier = Modifier.weight(1f),
+                        enabled = isValidTaskInput(moneyAmount, hours, minutes),
+                    ) {
+                        Text("Confirm")
+                    }
+                }
+            }
+
+            if (isValidTaskInput(moneyAmount, hours, minutes)) {
+
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp)
+                            .border(1.dp, MaterialTheme.colorScheme.surfaceVariant)
+                            .padding(8.dp)
+                    ) {
+                        Text(
+                            text = "REPLACE THIS WITH DIALOG",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 8.dp) // Space below the tagline
+                        )
+
+                    }
+                }
+
             }
             }
     }
+}
+
+fun isValidTaskInput(
+    moneyAmount: String,
+    hours: String,
+    minutes: String
+): Boolean {
+    return moneyAmount.isNotEmpty() &&
+            hours.isNotEmpty() &&
+            minutes.isNotEmpty() &&
+            ((hours.toIntOrNull() ?: 0) > 0 || (minutes.toIntOrNull() ?: 0) >= 30)
 }
