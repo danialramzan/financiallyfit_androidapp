@@ -3,6 +3,8 @@ agp = "8.7.3"
 coil = "2.4.0"
 coilNetworkOkhttp = "3.0.4"
 foundation = "1.7.6"
+fuelJson = "2.3.1"
+fuelVersion = "2.3.1"
 googleid = "1.1.1"
 gson = "2.10.1"
 junit = "4.13.2"
@@ -21,8 +23,9 @@ navigationComposeVersion = "2.7.7"
 navigationFragment = "2.8.5"
 navigationUi = "2.8.5"
 playServicesAuth = "21.3.0"
+stripeAndroid = "21.4.1"
 uiToolingPreview = "1.7.6"
-kotlin = "1.9.24"
+kotlin = "2.1.0"
 coreKtx = "1.15.0"
 firebaseFirestore = "25.1.1"
 
@@ -36,7 +39,10 @@ coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version
 credentials = { module = "androidx.credentials:credentials" }
 credentials-play-services-auth = { module = "androidx.credentials:credentials-play-services-auth" }
 firebase-analytics = { module = "com.google.firebase:firebase-analytics" }
+firebase-auth = { module = "com.google.firebase:firebase-auth" }
 foundation = { module = "androidx.compose.foundation:foundation", version.ref = "foundation" }
+fuel-json = { module = "com.github.kittinunf.fuel:fuel-json", version.ref = "fuelJson" }
+github-fuel = { module = "com.github.kittinunf.fuel:fuel", version.ref = "fuelVersion" }
 gms-play-services-auth = { module = "com.google.android.gms:play-services-auth", version.ref = "playServicesAuth" }
 googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
@@ -53,6 +59,7 @@ navigation-compose = { module = "androidx.navigation:navigation-compose", versio
 navigation-fragment = { group = "androidx.navigation", name = "navigation-fragment", version.ref = "navigationFragment" }
 navigation-ui = { group = "androidx.navigation", name = "navigation-ui", version.ref = "navigationUi" }
 play-services-auth = { module = "com.google.android.gms:play-services-auth" }
+stripe-android = { module = "com.stripe:stripe-android", version.ref = "stripeAndroid" }
 ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview", version.ref = "uiToolingPreview" }
 core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore", version.ref = "firebaseFirestore" }

@@ -821,6 +821,7 @@ fun AddTaskScreen(navController: NavController) {
                                     // Navigate to payment or perform payment logic
                                     isDialogOpen = false
                                     println("Navigating to payment...")
+                                    navController.navigate("payment")
                                 }) {
                                     Text("Confirm and Proceed to Payment")
                                 }

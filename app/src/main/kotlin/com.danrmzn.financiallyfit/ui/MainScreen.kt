@@ -41,6 +41,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.danrmzn.financiallyfit.PaymentScreen
 import com.google.firebase.auth.FirebaseAuth
 
 
@@ -140,6 +141,10 @@ fun NavigationGraph(navController: NavHostController) {
         }
         composable("addTaskScreen") { // Define the addTaskScreen route
             AddTaskScreen(navController)
+        }
+
+        composable("payment") { // Define the payment route
+            PaymentScreen()
         }
     }
 }
