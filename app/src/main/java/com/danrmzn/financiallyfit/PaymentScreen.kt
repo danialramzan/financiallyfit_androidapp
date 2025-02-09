@@ -1,5 +1,6 @@
 package com.danrmzn.financiallyfit
 
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -17,6 +18,7 @@ import com.stripe.android.paymentsheet.rememberPaymentSheet
 
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
+import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun PaymentScreen() {
@@ -24,30 +26,42 @@ fun PaymentScreen() {
     val context = LocalContext.current
     var customerConfig by remember { mutableStateOf<PaymentSheet.CustomerConfiguration?>(null) }
     var paymentIntentClientSecret by remember { mutableStateOf<String?>(null) }
+    val user = FirebaseAuth.getInstance().currentUser
+
 
     LaunchedEffect(context) {
-        // Call the Firebase Cloud Function to get Stripe PaymentIntent details
-        "http://127.0.0.1:5001/financiallyfit-52b32/us-central1/payment_sheet"  // Replace with actual backend URL
-            .httpPost()
-            .responseJson { _, _, result ->
-                if (result is Result.Success) {
-                    val responseJson = result.get().obj()
-                    paymentIntentClientSecret = responseJson.getString("paymentIntent")
-                    customerConfig = PaymentSheet.CustomerConfiguration(
-                        id = responseJson.getString("customer"),
-                        ephemeralKeySecret = responseJson.getString("ephemeralKey")
-                    )
-                    val publishableKey = responseJson.getString("publishableKey")
-                    PaymentConfiguration.init(context, publishableKey)
+
+        user?.getIdToken(true)?.addOnSuccessListener { result ->
+            val token = result.token
+
+
+            // Call the Firebase Cloud Function to get Stripe PaymentIntent details
+            "https://us-central1-financiallyfit-52b32.cloudfunctions.net/payment_sheet"  // Replace with actual backend URL
+                .httpPost()
+                .header("Authorization", "Bearer $token")
+                .responseJson { _, _, result ->
+                    if (result is Result.Success) {
+                        val responseJson = result.get().obj()
+                        paymentIntentClientSecret = responseJson.getString("paymentIntent")
+                        Log.wtf("GNX", paymentIntentClientSecret)
+                        customerConfig = PaymentSheet.CustomerConfiguration(
+                            id = responseJson.getString("customer"),
+                            ephemeralKeySecret = responseJson.getString("ephemeralKey")
+                        )
+                        val publishableKey = responseJson.getString("publishableKey")
+                        PaymentConfiguration.init(context, publishableKey)
+                    } else
+                        Log.wtf("GNX", "paymentIntentClientSecret")
                 }
-            }
+        }
     }
 
     Button(
         onClick = {
             val currentConfig = customerConfig
             val currentClientSecret = paymentIntentClientSecret
-
+            Log.d("GNX", customerConfig.toString())
+            Log.d("GNX", paymentIntentClientSecret.toString())
             if (currentConfig != null && currentClientSecret != null) {
                 presentPaymentSheet(paymentSheet, currentConfig, currentClientSecret)
             }
@@ -65,7 +79,7 @@ private fun presentPaymentSheet(
     paymentSheet.presentWithPaymentIntent(
         paymentIntentClientSecret,
         PaymentSheet.Configuration(
-            merchantDisplayName = "Your Business Name",
+            merchantDisplayName = "FinanciallyFit",
             customer = customerConfig,
             allowsDelayedPaymentMethods = true
         )

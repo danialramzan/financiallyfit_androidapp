@@ -819,6 +819,14 @@ fun AddTaskScreen(navController: NavController) {
                             confirmButton = {
                                 TextButton(onClick = {
                                     // Navigate to payment or perform payment logic
+
+                                    // init stripe callback
+                                    // once done,
+
+
+
+
+
                                     isDialogOpen = false
                                     println("Navigating to payment...")
                                     navController.navigate("payment")

@@ -48,7 +48,7 @@ dependencies {
 
     implementation platform('com.google.firebase:firebase-bom:33.9.0')
     implementation libs.firebase.analytics
-    //   implementation 'com.google.android.gms:play-services-ads'
+    // implementation 'com.google.android.gms:play-services-ads'
     implementation libs.firebase.auth
 
     implementation libs.github.fuel
@@ -80,6 +80,7 @@ dependencies {
     implementation libs.credentials.play.services.auth
     implementation libs.googleid
     implementation libs.gson
+
 
     implementation libs.stripe.android
 
@@ -123,6 +124,7 @@ dependencies {
     implementation libs.navigation.ui
     implementation libs.core.ktx
     implementation libs.firebase.firestore
+    implementation libs.androidx.media3.common.ktx
     testImplementation libs.junit
     androidTestImplementation libs.ext.junit
     androidTestImplementation libs.espresso.core
