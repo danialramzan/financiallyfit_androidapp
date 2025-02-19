@@ -79,7 +79,7 @@ private fun presentPaymentSheet(
     paymentSheet.presentWithPaymentIntent(
         paymentIntentClientSecret,
         PaymentSheet.Configuration(
-            merchantDisplayName = "FinanciallyFit",
+            merchantDisplayName = "FinanciallyFit CA",
             customer = customerConfig,
             allowsDelayedPaymentMethods = true
         )

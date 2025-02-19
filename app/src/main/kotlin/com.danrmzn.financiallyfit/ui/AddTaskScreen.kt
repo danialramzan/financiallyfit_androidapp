@@ -1,6 +1,8 @@
 package com.danrmzn.financiallyfit.ui
 
 import android.os.Build
+import android.util.Log
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -46,20 +48,25 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import com.danrmzn.financiallyfit.Task
 import com.danrmzn.financiallyfit.TaskList
 import com.danrmzn.financiallyfit.TaskType
+import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.tasks.await
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.json.JSONArray
 import java.time.LocalDateTime
-import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -68,6 +75,7 @@ fun AddTaskScreen(navController: NavController) {
     var selectedOption by rememberSaveable { mutableStateOf(TaskType.None.name) }
     var hours by rememberSaveable { mutableStateOf("") }
     var minutes by rememberSaveable { mutableStateOf("") }
+    var currency by rememberSaveable { mutableStateOf("") }
     var moneyAmount by rememberSaveable { mutableStateOf("") }
     var taskList by rememberSaveable { mutableStateOf<TaskList?>(null) } // TaskList starts as null
     val repOptions = (1..100).map { it.toString() } // Options for reps (1-100)
@@ -76,23 +84,30 @@ fun AddTaskScreen(navController: NavController) {
 
     var expandedHours by rememberSaveable { mutableStateOf(false) }
     var expandedMinutes by rememberSaveable { mutableStateOf(false) }
+    var expandedCurrencies by rememberSaveable { mutableStateOf(false) }
     var repsDropdownVisible by rememberSaveable { mutableStateOf(false) }
     var isDialogOpen by rememberSaveable { mutableStateOf(false) }
 
+    val context = LocalContext.current
+
+    var currencyOptions by remember { mutableStateOf(emptyList<String>()) }
+
+    
+    // this function crashes, fix it
+    LaunchedEffect(Unit) {
+        val result = try {
+            Log.d("GNX", "before")
+            currencyOptions = getCurrencyOptions()  // ✅ Fetch data only once
+        } catch (e: Exception) {
+            Toast.makeText(context,
+                e.message.toString()
+                //"Failed to load data, please check your internet connection!"
+                , Toast.LENGTH_SHORT).show()
+            currencyOptions = emptyList<String>()
+        }
+    }
 
 
-
-
-//    val temporaryTaskList = rememberSaveable { mutableStateListOf<Task>() }
-
-//    val temporaryTaskList = rememberSaveable(
-//        saver = Saver<SnapshotStateList<Task>, List<Task>>(
-//            save = { it.toList() },
-//            restore = { SnapshotStateList<Task>().apply { addAll(it) } }
-//        )
-//    ) {
-//        mutableStateListOf<Task>()
-//    }
 
     val temporaryTaskList = rememberSaveable(
         saver = Saver<SnapshotStateList<Task>, List<Map<String, Any>>>(
@@ -246,7 +261,9 @@ fun AddTaskScreen(navController: NavController) {
                                         }
                                     }
                                 },
-                            modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { expanded = !expanded },
                             trailingIcon = {
                                 IconButton(onClick = { expanded = !expanded }) {
                                     Icon(Icons.Default.ArrowDropDown, contentDescription = null)
@@ -452,14 +469,66 @@ fun AddTaskScreen(navController: NavController) {
                 )
             }
             //            // Money Input for TaskList
+
+
+            /////////////////////////////////////////////// add currency
             item {
-                OutlinedTextField(
-                    value = moneyAmount,
-                    onValueChange = { moneyAmount = it },
-                    label = { Text("Total Amount (Money)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Money Amount Input (Replacing Hours Dropdown)
+                    OutlinedTextField(
+                        value = moneyAmount,
+                        onValueChange = { moneyAmount = it },
+                        label = { Text("Amount") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f) // Ensures proper alignment with Minutes dropdown
+                    )
+
+                    // Minutes Dropdown (Unchanged)
+                    Box(modifier = Modifier.weight(1f)) {
+                        OutlinedTextField(
+                            value = currency,
+                            onValueChange = {},
+                            label = { Text("Currency") },
+                            readOnly = true,
+                            interactionSource = remember { MutableInteractionSource() }
+                                .also { interactionSource ->
+                                    LaunchedEffect(interactionSource) {
+                                        interactionSource.interactions.collect {
+                                            if (it is PressInteraction.Release) {
+                                                expandedCurrencies = !expandedCurrencies
+                                            }
+                                        }
+                                    }
+                                },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { expandedCurrencies = true },
+                            trailingIcon = {
+                                IconButton(onClick = { expandedCurrencies = true }) {
+                                    Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                                }
+                            }
+                        )
+                        DropdownMenu(
+                            expanded = expandedCurrencies,
+                            onDismissRequest = { expandedCurrencies = false }
+                        ) {
+                            currencyOptions.forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text(option) },
+                                    onClick = {
+                                        minutes = option
+                                        expandedCurrencies = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "Enter the amount of money you are willing to put up.",
@@ -468,6 +537,14 @@ fun AddTaskScreen(navController: NavController) {
                     modifier = Modifier.padding(bottom = 8.dp) // Space below the tagline
                 )
             }
+
+
+
+
+
+            ///////////////////////////////////////////////////////////////
+
+
 
 //            // Commit Button
 //            item {
@@ -845,6 +922,39 @@ fun AddTaskScreen(navController: NavController) {
                 }
     }
 }
+
+suspend fun getCurrencyOptions(): List<String> {
+    val user = FirebaseAuth.getInstance().currentUser ?: return emptyList()
+    val token = user.getIdToken(true).await().token ?: return emptyList()
+    Log.d("GNX", "1")
+    val client = OkHttpClient()
+    val request = Request.Builder()
+        .url(
+            "https://us-central1-financiallyfit-52b32.cloudfunctions.net/get_supported_currencies")
+        .header("Authorization", "Bearer $token")
+        .build()
+    Log.d("GNX", "2")
+
+   // val response = client.newCall(request).execute()
+
+    try {
+        Log.d("GNX", "Executing request...")
+        val response = client.newCall(request).execute()
+        Log.d("GNX", "3 - Response received")
+    } catch (e: Exception) {
+        Log.e("GNX", "Request failed: ${e.message}", e)
+    }
+    return emptyList<String>()
+
+
+
+
+//    if (!response.isSuccessful) throw Exception("Request failed with status code: ${response.code}")
+//    val responseText = response.body?.string() ?: throw Exception("Response body is null")
+//    val jsonResponse = JSONArray(responseText)
+//    return List(jsonResponse.length()) { jsonResponse.getString(it) }
+}
+
 
 fun isValidTaskInput(
     moneyAmount: String,
