@@ -38,9 +38,14 @@ fun PaymentScreen() {
             // Call the Firebase Cloud Function to get Stripe PaymentIntent details
             "https://us-central1-financiallyfit-52b32.cloudfunctions.net/payment_sheet"  // Replace with actual backend URL
                 .httpPost()
-                .header("Authorization", "Bearer $token")
+                .header("Authorization",
+//                    "Bearer $token"
+                    "Bearer $token"
+                )
                 .responseJson { _, _, result ->
+                    Log.wtf("GNX", token)
                     if (result is Result.Success) {
+                        Log.wtf("GNX", "Success!!!!")
                         val responseJson = result.get().obj()
                         paymentIntentClientSecret = responseJson.getString("paymentIntent")
                         Log.wtf("GNX", paymentIntentClientSecret)
@@ -51,7 +56,7 @@ fun PaymentScreen() {
                         val publishableKey = responseJson.getString("publishableKey")
                         PaymentConfiguration.init(context, publishableKey)
                     } else
-                        Log.wtf("GNX", "paymentIntentClientSecret")
+                        Log.wtf("GNX", "NOT SUCCESS!!!!")
                 }
         }
     }
