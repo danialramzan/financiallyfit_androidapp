@@ -509,7 +509,7 @@ fun AddTaskScreen(navController: NavController) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(150.dp) // ✅ Fixed height
+                        .height(100.dp) // ✅ Fixed height
                         .padding(bottom = 8.dp)
                         .border(1.dp, MaterialTheme.colorScheme.surfaceVariant)
                         .padding(8.dp)
@@ -711,6 +711,10 @@ fun AddTaskScreen(navController: NavController) {
                     dpd.datePicker.minDate = Calendar.getInstance().timeInMillis
                     dpd.datePicker.maxDate = Calendar.getInstance().
                     apply { add(Calendar.DAY_OF_MONTH, 7)}.timeInMillis
+
+                    dpd.setOnCancelListener { showDatePicker = false }
+                    dpd.setOnDismissListener { showDatePicker = false }
+
                     dpd.show()
                 }
 
@@ -721,7 +725,6 @@ fun AddTaskScreen(navController: NavController) {
                         { _: TimePicker, hour: Int, minute: Int ->
                             calendar.set(Calendar.HOUR_OF_DAY, hour)
                             calendar.set(Calendar.MINUTE, minute)
-                            val selectedTime = String.format("%02d:%02d", hour, minute)
 
                             snackScope.launch {
                                 snackState.showSnackbar("Entered time: $calendar.")
@@ -732,7 +735,7 @@ fun AddTaskScreen(navController: NavController) {
                         },
                         calendar.get(Calendar.HOUR_OF_DAY),
                         calendar.get(Calendar.MINUTE),
-                        true
+                        false
                     )
 
                     timePickerDialog.show()
