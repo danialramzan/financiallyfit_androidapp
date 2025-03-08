@@ -1,7 +1,10 @@
 package com.danrmzn.financiallyfit.ui
 
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import android.os.Build
 import android.util.Log
+import android.widget.TimePicker
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.border
@@ -20,6 +23,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -30,18 +34,25 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimeInput
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -59,16 +70,40 @@ import androidx.navigation.NavController
 import com.danrmzn.financiallyfit.Task
 import com.danrmzn.financiallyfit.TaskList
 import com.danrmzn.financiallyfit.TaskType
+import com.github.kittinunf.fuel.httpGet
+import com.github.kittinunf.fuel.json.responseJson
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.tasks.await
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import com.github.kittinunf.result.Result
+import com.stripe.android.core.networking.StripeRequest
+import kotlinx.coroutines.launch
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.plus
+import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
 import org.json.JSONArray
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
+import network.chaintech.kmp_date_time_picker.ui.datetimepicker.WheelDateTimePickerView
+import network.chaintech.kmp_date_time_picker.utils.DateTimePickerView
+import network.chaintech.kmp_date_time_picker.utils.MAX
+import network.chaintech.kmp_date_time_picker.utils.MIN
+import network.chaintech.kmp_date_time_picker.utils.TimeFormat
+import network.chaintech.kmp_date_time_picker.utils.now
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 
-@RequiresApi(Build.VERSION_CODES.O)
+
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddTaskScreen(navController: NavController) {
     var taskName by rememberSaveable { mutableStateOf("") }
@@ -80,6 +115,49 @@ fun AddTaskScreen(navController: NavController) {
     var taskList by rememberSaveable { mutableStateOf<TaskList?>(null) } // TaskList starts as null
     val repOptions = (1..100).map { it.toString() } // Options for reps (1-100)
     var selectedReps by rememberSaveable { mutableStateOf("") }
+    var currencyOptions by rememberSaveable { mutableStateOf(emptyList<String>()) }
+
+    var showTimePicker by rememberSaveable { mutableStateOf(false) }
+    var showDatePicker by rememberSaveable { mutableStateOf(false) }
+
+    var dateConfirmed by rememberSaveable { mutableStateOf(false) }
+    var timeConfirmed by rememberSaveable { mutableStateOf(false) }
+
+    val state = rememberTimePickerState()
+    val formatter = remember { SimpleDateFormat("hh:mm a", Locale.getDefault()) }
+    val snackState = remember { SnackbarHostState() }
+    val snackScope = rememberCoroutineScope()
+
+
+    LaunchedEffect(Unit) {
+        val user = FirebaseAuth.getInstance().currentUser
+
+        user?.getIdToken(true)?.addOnSuccessListener { result ->
+            val token = result.token
+            Log.wtf("Auth", "Firebase Token: $token")
+
+            // Fetch the currency list from the backend
+            "https://us-central1-financiallyfit-52b32.cloudfunctions.net/get_supported_currencies"
+                .httpGet()
+                .header("Authorization", "Bearer $token")
+                .responseJson { _, _, result ->
+                    if (result is Result.Success) {
+                        try {
+                            val currencyList: List<String> =
+                                Json.decodeFromString(result.get().content)
+                            currencyOptions = currencyList
+                            Log.wtf("GNX", "Fetched Currencies: $currencyOptions")
+                        } catch (e: Exception) {
+                            Log.wtf("GNX", "JSON Parsing Error: ${e.message}")
+                        }
+                    } else {
+                        Log.wtf("GNX", "Failed to fetch currencies")
+                    }
+                }
+        }?.addOnFailureListener {
+            Log.wtf("AUTH", "Firebase Auth Error: ${it.message}")
+        }
+    }
 
 
     var expandedHours by rememberSaveable { mutableStateOf(false) }
@@ -87,26 +165,32 @@ fun AddTaskScreen(navController: NavController) {
     var expandedCurrencies by rememberSaveable { mutableStateOf(false) }
     var repsDropdownVisible by rememberSaveable { mutableStateOf(false) }
     var isDialogOpen by rememberSaveable { mutableStateOf(false) }
+    val calendar = Calendar.getInstance()
+
 
     val context = LocalContext.current
 
-    var currencyOptions by remember { mutableStateOf(emptyList<String>()) }
 
-    
+    var selectedHour by remember { mutableStateOf(0) }
+    var selectedMinute by remember { mutableStateOf(0) }
+    var timeString by remember { mutableStateOf("Select Time") }
+
+
     // this function crashes, fix it
     LaunchedEffect(Unit) {
         val result = try {
             Log.d("GNX", "before")
             currencyOptions = getCurrencyOptions()  // ✅ Fetch data only once
         } catch (e: Exception) {
-            Toast.makeText(context,
+            Toast.makeText(
+                context,
                 e.message.toString()
                 //"Failed to load data, please check your internet connection!"
-                , Toast.LENGTH_SHORT).show()
+                , Toast.LENGTH_SHORT
+            ).show()
             currencyOptions = emptyList<String>()
         }
     }
-
 
 
     val temporaryTaskList = rememberSaveable(
@@ -140,7 +224,6 @@ fun AddTaskScreen(navController: NavController) {
     ) {
         mutableStateListOf<Task>()
     }
-
 
 
     val hourOptions = (0..24).map { it.toString().padStart(2, '0') }
@@ -401,12 +484,11 @@ fun AddTaskScreen(navController: NavController) {
                         }
                     }
                 }
-                }
+            }
 
 
         }
-    }
-        else {
+    } else {
         // SHALL BE MNOVED TO NEXT SCREEN
 
         LazyColumn(
@@ -418,117 +500,164 @@ fun AddTaskScreen(navController: NavController) {
             // TaskList is committed, display its content
             item {
 //                Text("Task List Committed!")
-
-
-                // Temporary Task List Display
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 8.dp)
-                                .border(1.dp, MaterialTheme.colorScheme.surfaceVariant)
-                                .padding(8.dp)
-                        ) {
-                            Column {
-                                // Heading for the Task List
-                                Text(
-                                    text = "Current Task List:",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    modifier = Modifier.padding(bottom = 8.dp) // Space below the heading
-                                )
-
-                                // Display Each Task Below the Heading
-                                temporaryTaskList.forEach { task ->
-                                    if (task.type == TaskType.valueOf("Reps")) {
-                                        Text(
-                                            text = buildAnnotatedString {
-                                                withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
-                                                    append("${task.reps}x ") // Bold reps count
-                                                }
-                                                append(task.name) // Task name
-                                            },
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            modifier = Modifier.padding(bottom = 4.dp) // Space between tasks
-                                        )
-                                    } else {
-                                        Text(
-                                            text = task.name,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            modifier = Modifier.padding(bottom = 4.dp) // Space between tasks
-                                        )
-                                    }
-                            }
-
-                        }
-
-                }
                 Text(
-                    text = "Click 'Go Back' if you need to edit tasks.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 8.dp) // Space below the tagline
+                    text = "Current Task List:",
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.padding(bottom = 8.dp) // Space below heading
                 )
-            }
-            //            // Money Input for TaskList
 
-
-            /////////////////////////////////////////////// add currency
-            item {
-                Row(
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        .fillMaxWidth()
+                        .height(150.dp) // ✅ Fixed height
+                        .padding(bottom = 8.dp)
+                        .border(1.dp, MaterialTheme.colorScheme.surfaceVariant)
+                        .padding(8.dp)
                 ) {
-                    // Money Amount Input (Replacing Hours Dropdown)
-                    OutlinedTextField(
-                        value = moneyAmount,
-                        onValueChange = { moneyAmount = it },
-                        label = { Text("Amount") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f) // Ensures proper alignment with Minutes dropdown
-                    )
 
-                    // Minutes Dropdown (Unchanged)
-                    Box(modifier = Modifier.weight(1f)) {
-                        OutlinedTextField(
-                            value = currency,
-                            onValueChange = {},
-                            label = { Text("Currency") },
-                            readOnly = true,
-                            interactionSource = remember { MutableInteractionSource() }
-                                .also { interactionSource ->
-                                    LaunchedEffect(interactionSource) {
-                                        interactionSource.interactions.collect {
-                                            if (it is PressInteraction.Release) {
-                                                expandedCurrencies = !expandedCurrencies
-                                            }
+                    LazyColumn( // ✅ Makes content scrollable if needed
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+
+                        items(temporaryTaskList.toList()) { task -> // ✅ Use LazyColumn for performance
+                            if (task.type == TaskType.valueOf("Reps")) {
+                                Text(
+                                    text = buildAnnotatedString {
+                                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                                            append("${task.reps}x ") // Bold reps count
                                         }
-                                    }
-                                },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { expandedCurrencies = true },
-                            trailingIcon = {
-                                IconButton(onClick = { expandedCurrencies = true }) {
-                                    Icon(Icons.Default.ArrowDropDown, contentDescription = null)
-                                }
-                            }
-                        )
-                        DropdownMenu(
-                            expanded = expandedCurrencies,
-                            onDismissRequest = { expandedCurrencies = false }
-                        ) {
-                            currencyOptions.forEach { option ->
-                                DropdownMenuItem(
-                                    text = { Text(option) },
-                                    onClick = {
-                                        minutes = option
-                                        expandedCurrencies = false
-                                    }
+                                        append(task.name) // Task name
+                                    },
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.padding(bottom = 4.dp) // Space between tasks
+                                )
+                            } else {
+                                Text(
+                                    text = task.name,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.padding(bottom = 4.dp)
                                 )
                             }
                         }
                     }
                 }
+
+// Instructional Text Below Task List
+                Text(
+                    text = "Click 'Go Back' if you need to edit tasks.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp) // Space below tagline
+                )
+
+
+//                 Temporary Task List Display
+//                        Box(
+//                            modifier = Modifier
+//                                .fillMaxWidth()
+//                                .padding(bottom = 8.dp)
+//                                .border(1.dp, MaterialTheme.colorScheme.surfaceVariant)
+//                                .padding(8.dp)
+//                        ) {
+//                            Column {
+//                                // Heading for the Task List
+//                                Text(
+//                                    text = "Current Task List:",
+//                                    style = MaterialTheme.typography.bodyLarge,
+//                                    modifier = Modifier.padding(bottom = 8.dp) // Space below the heading
+//                                )
+//
+//                                // Display Each Task Below the Heading
+//                                temporaryTaskList.forEach { task ->
+//                                    if (task.type == TaskType.valueOf("Reps")) {
+//                                        Text(
+//                                            text = buildAnnotatedString {
+//                                                withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+//                                                    append("${task.reps}x ") // Bold reps count
+//                                                }
+//                                                append(task.name) // Task name
+//                                            },
+//                                            style = MaterialTheme.typography.bodyMedium,
+//                                            modifier = Modifier.padding(bottom = 4.dp) // Space between tasks
+//                                        )
+//                                    } else {
+//                                        Text(
+//                                            text = task.name,
+//                                            style = MaterialTheme.typography.bodyMedium,
+//                                            modifier = Modifier.padding(bottom = 4.dp) // Space between tasks
+//                                        )
+//                                    }
+//                            }
+//
+//                        }
+//
+//                }
+//                Text(
+//                    text = "Click 'Go Back' if you need to edit tasks.",
+//                    style = MaterialTheme.typography.bodySmall,
+//                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+//                    modifier = Modifier.padding(bottom = 8.dp) // Space below the tagline
+//                )
+
+
+            }
+            // Money Input for TaskList
+
+
+            /////////////////////////////////////////////// add currency
+
+            item {
+                // Money Amount Input (Replacing Hours Dropdown)
+                OutlinedTextField(
+                    value = moneyAmount,
+                    onValueChange = { moneyAmount = it },
+                    label = { Text("Amount") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                )
+
+                // Minutes Dropdown (Unchanged)
+                Box {
+                    OutlinedTextField(
+                        value = currency.uppercase(),
+                        onValueChange = {},
+                        label = { Text("Currency") },
+                        readOnly = true,
+                        interactionSource = remember { MutableInteractionSource() }
+                            .also { interactionSource ->
+                                LaunchedEffect(interactionSource) {
+                                    interactionSource.interactions.collect {
+                                        if (it is PressInteraction.Release) {
+                                            expandedCurrencies = !expandedCurrencies
+                                        }
+                                    }
+                                }
+                            },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { expandedCurrencies = true },
+                        trailingIcon = {
+                            IconButton(onClick = { expandedCurrencies = true }) {
+                                Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                            }
+                        }
+                    )
+
+                    DropdownMenu(
+                        expanded = expandedCurrencies,
+                        onDismissRequest = { expandedCurrencies = false }
+                    ) {
+                        currencyOptions.forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(option.uppercase()) },
+                                onClick = {
+                                    currency = option
+                                    expandedCurrencies = false
+                                }
+                            )
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "Enter the amount of money you are willing to put up.",
@@ -539,185 +668,85 @@ fun AddTaskScreen(navController: NavController) {
             }
 
 
+            /// change to native syustem time picker
 
 
 
-            ///////////////////////////////////////////////////////////////
+
+            // 1: DATEPICKER -> GET CALENDAR AND SET DATE (WITH 7 DAY LIMIT)
+            // 2: DATEPICKER CALLBACK -> TIMEPICKER USING PREVIOUS CALENDAR
+            // 3: CONVERT TO ZONEDTIMEZONE
+            // 4: profit
 
 
-
-//            // Commit Button
-//            item {
-//                Button(onClick = {
-//                    val amount = moneyAmount.toDoubleOrNull() ?: 0.0
-//                    taskList = TaskList(amount,
-//                        LocalDateTime.now(),
-//                        10,10).apply {
-////                        setMoneyAmount(amount)
-//                        // Populate tasks if needed
-//                    }
-//                }) {
-//                    Text("Commit")
-//                }
-//                Spacer(modifier = Modifier.height(16.dp))
-//            }
-//
-//            // Option to navigate back or perform further actions
-//            item {
-//                Button(onClick = {
-//                    commit = false
-//                }
-//                ) {
-//                    Text("Go Back")
-//                }
-//            }
-
-
-
+            ///
             item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    // Hours Dropdown
-                    Box(modifier = Modifier.weight(1f)) {
-                        OutlinedTextField(
-                            value = hours,
-                            onValueChange = {},
-                            label = { Text("HH") },
-                            readOnly = true,
-                            interactionSource = remember { MutableInteractionSource() }
-                                .also { interactionSource ->
-                                    LaunchedEffect(interactionSource) {
-                                        interactionSource.interactions.collect {
-                                            if (it is PressInteraction.Release) {
-                                                expandedHours = !expandedHours
-                                            }
-                                        }
-                                    }
-                                },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { expandedHours = true },
-                            trailingIcon = {
-                                IconButton(onClick = { expandedHours = true }) {
-                                    Icon(Icons.Default.ArrowDropDown, contentDescription = null)
-                                }
-                            }
-                        )
-                        DropdownMenu(
-                            expanded = expandedHours,
-                            onDismissRequest = { expandedHours = false }
-                        ) {
-                            hourOptions.forEach { option ->
-                                DropdownMenuItem(
-                                    text = { Text(option) },
-                                    onClick = {
-                                        hours = option
-                                        expandedHours = false
-                                    }
-                                )
-                            }
-                        }
+
+                Box {
+                    Button(onClick = { showDatePicker = true }) {
+                        Text("Set Due Date & Time")
                     }
 
-                    // Colon Separator
-                    Text(":", modifier = Modifier.align(Alignment.CenterVertically))
-
-                    // Minutes Dropdown
-                    Box(modifier = Modifier.weight(1f)) {
-                        OutlinedTextField(
-                            value = minutes,
-                            onValueChange = {},
-                            label = { Text("MM") },
-                            readOnly = true,
-                            interactionSource = remember { MutableInteractionSource() }
-                                .also { interactionSource ->
-                                    LaunchedEffect(interactionSource) {
-                                        interactionSource.interactions.collect {
-                                            if (it is PressInteraction.Release) {
-                                                expandedMinutes = !expandedMinutes
-                                            }
-                                        }
-                                    }
-                                },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { expandedMinutes = true },
-                            trailingIcon = {
-                                IconButton(onClick = { expandedMinutes = true }) {
-                                    Icon(Icons.Default.ArrowDropDown, contentDescription = null)
-                                }
-                            }
-                        )
-                        DropdownMenu(
-                            expanded = expandedMinutes,
-                            onDismissRequest = { expandedMinutes = false }
-                        ) {
-                            minuteOptions.forEach { option ->
-                                DropdownMenuItem(
-                                    text = { Text(option) },
-                                    onClick = {
-                                        minutes = option
-                                        expandedMinutes = false
-                                    }
-                                )
-                            }
-                        }
-                    }
+                    SnackbarHost(hostState = snackState)
                 }
-                Spacer(modifier = Modifier.height(8.dp))
 
+                if (showDatePicker) {
 
-                Text(
-                    text = "Set how much time you are willing to give yourself to complete the task (minimum amount is 30 minutes).",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 8.dp) // Space below the tagline
-                )
+                    val dpd = DatePickerDialog(
+                        context,
+                        { _, year, month, day ->
+                            calendar.set(Calendar.YEAR, year)
+                            calendar.set(Calendar.MONTH, month)
+                            calendar.set(Calendar.DAY_OF_MONTH, day)
 
-            }
-
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    // Add Task Button
-                    Button(
-                        onClick = {
-                            commit = false
-                        }
-                        ,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Go Back")
-                    }
-
-                    Spacer(modifier = Modifier.width(20.dp))
-
-                    // Commit Button
-                    Button(
-                        onClick = {
-//                            println("Tasks committed: $temporaryTaskList")
-                            isDialogOpen = true
+                            dateConfirmed = true
+                            showDatePicker = false
+                            showTimePicker = true // Trigger time picker after date selection
                         },
-                        modifier = Modifier.weight(1f),
-                        enabled = isValidTaskInput(moneyAmount, hours, minutes),
-                    ) {
-                        Text("Confirm")
-                    }
+                        calendar.get(Calendar.YEAR),
+                        calendar.get(Calendar.MONTH),
+                        calendar.get(Calendar.DAY_OF_MONTH)
+                    )
+
+                    dpd.datePicker.minDate = Calendar.getInstance().timeInMillis
+                    dpd.datePicker.maxDate = Calendar.getInstance().
+                    apply { add(Calendar.DAY_OF_MONTH, 7)}.timeInMillis
+                    dpd.show()
+                }
+
+
+                if (showTimePicker) {
+                    val timePickerDialog = TimePickerDialog(
+                        context,
+                        { _: TimePicker, hour: Int, minute: Int ->
+                            calendar.set(Calendar.HOUR_OF_DAY, hour)
+                            calendar.set(Calendar.MINUTE, minute)
+                            val selectedTime = String.format("%02d:%02d", hour, minute)
+
+                            snackScope.launch {
+                                snackState.showSnackbar("Entered time: $calendar.")
+                            }
+                            Log.wtf("GNX", calendar.toString())
+
+                            showTimePicker = false
+                        },
+                        calendar.get(Calendar.HOUR_OF_DAY),
+                        calendar.get(Calendar.MINUTE),
+                        true
+                    )
+
+                    timePickerDialog.show()
                 }
             }
 
 
-                item {
 
 
-                    // allegedly good code
+
+            item {
+
+
+                // allegedly good code
 
 //                    if (isDialogOpen) {
 //                        Dialog(onDismissRequest = { onDismissRequest() }) {
@@ -815,61 +844,59 @@ fun AddTaskScreen(navController: NavController) {
 //                        }
 
 
-
-
-                    if (isDialogOpen) {
-                        AlertDialog(
-                            onDismissRequest = { isDialogOpen = false },
-                            title = {
-                                Text(text = "Confirm Payment and Start Task")
-                            },
-                            text = {
-                                Column (
-                                    modifier = Modifier
-                                        .verticalScroll(rememberScrollState()) // Add scrolling capability
-                                        .padding(vertical = 8.dp)
+                if (isDialogOpen) {
+                    AlertDialog(
+                        onDismissRequest = { isDialogOpen = false },
+                        title = {
+                            Text(text = "Confirm Payment and Start Task")
+                        },
+                        text = {
+                            Column(
+                                modifier = Modifier
+                                    .verticalScroll(rememberScrollState()) // Add scrolling capability
+                                    .padding(vertical = 8.dp)
 //                                        .weight(weight = 1f, fill = false)
-                                ) {
-                                    // Display the total amount of money
-                                    Text(text = "Amount: $$moneyAmount")
+                            ) {
+                                // Display the total amount of money
+                                Text(text = "Amount: $$moneyAmount")
 
-                                    Spacer(modifier = Modifier.height(8.dp))
-
-
-
-                                    // Calculate start and end times using LocalTime
-                                    val currentTime = LocalDateTime.now()
-                                    val startTime = currentTime.plusMinutes(5)
-                                    val endTime = startTime.plusMinutes(hours.toLong() * 60 + minutes.toLong())
-                                    val formatter = DateTimeFormatter.ofPattern("MMMM d, yyyy h:mm a")
-                                    val formattedStartTime = startTime.format(formatter)
-                                    val formattedEndTime = endTime.format(formatter)
-
-                                    // Show the estimated start time and end time
-                                    Text(text = "Estimated start time: $formattedStartTime")
-                                    Text(text = "Estimated end time: $formattedEndTime")
-
-                                    Spacer(modifier = Modifier.height(8.dp))
-
-                                    Text(
-                                        text = "The time to do your task will start as soon as payment is pre-authorized. " +
-                                                "The above times give are given for reference only and assume payment is pre-authorized in 5 minutes from now."
-                                    )
+                                Spacer(modifier = Modifier.height(8.dp))
 
 
+                                // Calculate start and end times using LocalTime
+                                val currentTime = LocalDateTime.now()
+                                val startTime = currentTime.plusMinutes(5)
+                                val endTime =
+                                    startTime.plusMinutes(hours.toLong() * 60 + minutes.toLong())
+                                val formatter = DateTimeFormatter.ofPattern("MMMM d, yyyy h:mm a")
+                                val formattedStartTime = startTime.format(formatter)
+                                val formattedEndTime = endTime.format(formatter)
+
+                                // Show the estimated start time and end time
+                                Text(text = "Estimated start time: $formattedStartTime")
+                                Text(text = "Estimated end time: $formattedEndTime")
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                Text(
+                                    text = "The time to do your task will start as soon as payment is pre-authorized. " +
+                                            "The above times give are given for reference only and assume payment is pre-authorized in 5 minutes from now."
+                                )
 
 
 
 
 
 
-                                    Spacer(modifier = Modifier.height(8.dp))
 
-                                    // Inform the user about task start and preauthorization
 
-                                    Spacer(modifier = Modifier.height(16.dp))
+                                Spacer(modifier = Modifier.height(8.dp))
 
-                                    // Display the task list
+                                // Inform the user about task start and preauthorization
+
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                // Display the task list
 //                                    Text(text = "Tasks to complete:")
 //                                    temporaryTaskList.forEach { task ->
 //                                        if (task.type == TaskType.valueOf("Reps")) {
@@ -891,35 +918,32 @@ fun AddTaskScreen(navController: NavController) {
 //                                            )
 //                                        }
 //                                    }
-                                }
-                            },
-                            confirmButton = {
-                                TextButton(onClick = {
-                                    // Navigate to payment or perform payment logic
-
-                                    // init stripe callback
-                                    // once done,
-
-
-
-
-
-                                    isDialogOpen = false
-                                    println("Navigating to payment...")
-                                    navController.navigate("payment")
-                                }) {
-                                    Text("Confirm and Proceed to Payment")
-                                }
-                            },
-                            dismissButton = {
-                                TextButton(onClick = { isDialogOpen = false }) {
-                                    Text("Cancel")
-                                }
                             }
-                        )
-                    }
-                    }
+                        },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                // Navigate to payment or perform payment logic
+
+                                // init stripe callback
+                                // once done,
+
+
+                                isDialogOpen = false
+                                println("Navigating to payment...")
+                                navController.navigate("payment")
+                            }) {
+                                Text("Confirm and Proceed to Payment")
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { isDialogOpen = false }) {
+                                Text("Cancel")
+                            }
+                        }
+                    )
                 }
+            }
+        }
     }
 }
 
@@ -930,12 +954,13 @@ suspend fun getCurrencyOptions(): List<String> {
     val client = OkHttpClient()
     val request = Request.Builder()
         .url(
-            "https://us-central1-financiallyfit-52b32.cloudfunctions.net/get_supported_currencies")
+            "https://us-central1-financiallyfit-52b32.cloudfunctions.net/get_supported_currencies"
+        )
         .header("Authorization", "Bearer $token")
         .build()
     Log.d("GNX", "2")
 
-   // val response = client.newCall(request).execute()
+    // val response = client.newCall(request).execute()
 
     try {
         Log.d("GNX", "Executing request...")
@@ -945,8 +970,6 @@ suspend fun getCurrencyOptions(): List<String> {
         Log.e("GNX", "Request failed: ${e.message}", e)
     }
     return emptyList<String>()
-
-
 
 
 //    if (!response.isSuccessful) throw Exception("Request failed with status code: ${response.code}")

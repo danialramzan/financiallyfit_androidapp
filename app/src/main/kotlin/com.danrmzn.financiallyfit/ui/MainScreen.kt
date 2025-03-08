@@ -129,6 +129,13 @@ fun BottomNavigationBar(navController: NavHostController) {
 @Composable
 fun NavigationGraph(navController: NavHostController) {
     NavHost(navController = navController, startDestination = "New") {
+
+        // outline routes here!
+
+//        composable("SCREEN_NAME") {
+//            SCREEN_FUNCTION(navController)
+//        }
+
         composable("New") {
             HomeScreen(navController)
         }
@@ -136,14 +143,13 @@ fun NavigationGraph(navController: NavHostController) {
             HistoryScreen()
         }
         composable("Settings") {
-//            Screen3()
             SettingsScreen()
         }
-        composable("addTaskScreen") { // Define the addTaskScreen route
+        composable("addTaskScreen") {
             AddTaskScreen(navController)
         }
 
-        composable("payment") { // Define the payment route
+        composable("payment") {
             PaymentScreen()
         }
     }
@@ -164,7 +170,7 @@ fun SettingsItem(
             .fillMaxWidth()
             .clickable(
                 interactionSource = interactionSource,
-                indication = ripple() // Adds ripple effect
+                indication = ripple()
             ) {
                 onClick()
             }
@@ -181,7 +187,6 @@ fun SettingsItem(
             tint = MaterialTheme.colorScheme.primary
         )
 
-        // Text
         Text(
             text = text,
             style = MaterialTheme.typography.titleLarge
@@ -197,11 +202,10 @@ fun HomeScreen(navController: NavController) {
             .fillMaxSize()
             .padding(32.dp)
     ) {
-        // Content at the top of the screen
         Column(
             modifier = Modifier
-                .fillMaxWidth() // Fill only the width, not the entire screen height
-                .align(Alignment.TopStart), // Align column to the top-start
+                .fillMaxWidth()
+                .align(Alignment.TopStart),
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.Start
         ) {
@@ -216,7 +220,6 @@ fun HomeScreen(navController: NavController) {
             )
         }
 
-        // Button at the bottom center of the screen
         Button(
             onClick = {
                 // on click logic
@@ -224,8 +227,8 @@ fun HomeScreen(navController: NavController) {
 
             },
             modifier = Modifier
-                .align(Alignment.BottomCenter) // Align button to the bottom center
-                .padding(bottom = 16.dp) // Add padding to avoid flush with the edge
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 16.dp)
         ) {
             Text("Let's Go!")
         }

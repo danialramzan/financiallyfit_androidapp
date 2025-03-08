@@ -3,7 +3,8 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     id 'kotlin-parcelize'
-    id("org.jetbrains.kotlin.plugin.compose") version "2.1.0" // this version matches your Kotlin version
+    id("org.jetbrains.kotlin.plugin.compose") version "2.1.0"
+    id("org.jetbrains.kotlin.plugin.serialization") version "2.1.0"
 }
 
 android {
@@ -53,6 +54,8 @@ dependencies {
 
     implementation libs.github.fuel
     implementation libs.fuel.json
+    implementation(libs.kmp.date.time.picker)
+
 
 
 //    implementation "androidx.core:core-ktx:1.13.1"
@@ -68,6 +71,8 @@ dependencies {
 //    implementation "com.google.dagger:hilt-android:2.49"
 //    annotationProcessor "com.google.dagger:hilt-compiler:2.49"
     implementation libs.androidx.material
+    implementation(libs.kotlinx.serialization.json) // Latest version
+
 //
 //    // Firebase
 //    implementation platform("com.google.firebase:firebase-bom:33.1.1")

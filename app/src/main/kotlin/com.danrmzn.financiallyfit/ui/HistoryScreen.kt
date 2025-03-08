@@ -17,16 +17,18 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun HistoryScreen() {
+
+
+    // not much here at the moment
     Box(
         modifier = Modifier
             .fillMaxSize()
             .padding(32.dp)
     ) {
-        // Content at the top of the screen
         Column(
             modifier = Modifier
-                .fillMaxWidth() // Fill only the width, not the entire screen height
-                .align(Alignment.TopStart), // Align column to the top-start
+                .fillMaxWidth()
+                .align(Alignment.TopStart),
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.Start
         ) {

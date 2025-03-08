@@ -82,7 +82,6 @@ fun SettingsScreen() {
             }
         }
 
-//        // Divider
         HorizontalDivider(thickness = 1.dp)
 
         // List of OptionsExitToApp
@@ -91,10 +90,7 @@ fun SettingsScreen() {
                 .fillMaxSize()
                 .padding(vertical = 8.dp)
         ) {
-            // Add reusable items
 
-
-//            item { SettingsItem(icon = Icons.Default.Person, text = "Account") }
             item {
                 SettingsItem(
                     icon = Icons.Filled.Language,
@@ -108,6 +104,7 @@ fun SettingsScreen() {
                     }
                 )
             }
+
             item {
                 SettingsItem(
                     icon = Icons.Default.Description,
@@ -121,6 +118,7 @@ fun SettingsScreen() {
                     }
                 )
             }
+
             item {
                 SettingsItem(
                     icon = Icons.Default.Lock,
@@ -135,7 +133,6 @@ fun SettingsScreen() {
                 )
             }
 
-//            item { SettingsItem(icon = Icons.Default.Favorite, text = "Storage and Data") }
             item {
                 SettingsItem(
                     icon = Icons.AutoMirrored.Filled.ExitToApp,
@@ -145,7 +142,6 @@ fun SettingsScreen() {
                         Toast.makeText(context, "Successfully Logged Out!", Toast.LENGTH_SHORT)
                             .show()
 
-                        // Optionally navigate to a login screen
                         val intent = Intent(context, LoginActivity::class.java)
                         intent.flags =
                             Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -153,6 +149,7 @@ fun SettingsScreen() {
                     }
                 )
             }
+
         }
     }
 }
