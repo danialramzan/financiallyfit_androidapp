@@ -44,11 +44,6 @@ public class GoogleAuthClient {
         return false;
     }
 
-    public interface SignInCallback {
-        void onSuccess();
-        void onFailure(String errorMessage);
-    }
-
     public void signIn(SignInCallback callback) {
         if (isSignedIn()) {
             callback.onSuccess();
