@@ -41,7 +41,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.danrmzn.financiallyfit.PaymentScreen
 import com.google.firebase.auth.FirebaseAuth
 
 
@@ -149,6 +148,7 @@ fun NavigationGraph(navController: NavHostController) {
             AddTaskScreen(navController)
         }
 
+        // payment screen is being converted to middleware
         composable("payment") {
 //            PaymentScreen()
         }
@@ -177,7 +177,7 @@ fun SettingsItem(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Icon
+        // user profile picture
         Icon(
             imageVector = icon,
             contentDescription = null,

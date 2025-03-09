@@ -23,7 +23,7 @@ import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun PaymentScreen(finalTaskList: TaskList? = null, triggerPayment: Boolean
-                  , onPaymentComplete: (Boolean) -> Unit
+                  , onPaymentComplete: (Boolean) -> Unit // not used yet!
     ) {
     val paymentSheet = rememberPaymentSheet(::onPaymentSheetResult)
     val context = LocalContext.current
@@ -31,12 +31,12 @@ fun PaymentScreen(finalTaskList: TaskList? = null, triggerPayment: Boolean
     var paymentIntentClientSecret by remember { mutableStateOf<String?>(null) }
     val user = FirebaseAuth.getInstance().currentUser
 
-    // 🚀 Fetch Payment Intent & Trigger Payment Only When `triggerPayment` is True
     LaunchedEffect(triggerPayment) {
         if (triggerPayment) {
             user?.getIdToken(true)?.addOnSuccessListener { result ->
                 val token = result.token
 
+                // structure json text
                 val requestBody = """
                 {
                     "amount": ${finalTaskList?.moneyAmount?.times(100)},
@@ -45,12 +45,7 @@ fun PaymentScreen(finalTaskList: TaskList? = null, triggerPayment: Boolean
             """.trimIndent()
 
                 Log.wtf("GNX", requestBody)
-
-
-
-                Log.wtf("DNX", requestBody)
-
-
+                // backend server url
                 "https://us-central1-financiallyfit-52b32.cloudfunctions.net/payment_sheet"
                     .httpPost()
                     .header("Authorization", "Bearer $token")
@@ -67,7 +62,6 @@ fun PaymentScreen(finalTaskList: TaskList? = null, triggerPayment: Boolean
                             val publishableKey = responseJson.getString("publishableKey")
                             PaymentConfiguration.init(context, publishableKey)
 
-                            // 🚀 Trigger Payment Sheet when ready
                             if (customerConfig != null && paymentIntentClientSecret != null) {
                                 presentPaymentSheet(paymentSheet, customerConfig!!, paymentIntentClientSecret!!)
                             }
@@ -79,105 +73,6 @@ fun PaymentScreen(finalTaskList: TaskList? = null, triggerPayment: Boolean
         }
     }
 }
-
-
-//@Composable
-//fun PaymentScreen() {
-//    val paymentSheet = rememberPaymentSheet(::onPaymentSheetResult)
-//    val context = LocalContext.current
-//    var customerConfig by remember { mutableStateOf<PaymentSheet.CustomerConfiguration?>(null) }
-//    var paymentIntentClientSecret by remember { mutableStateOf<String?>(null) }
-//    val user = FirebaseAuth.getInstance().currentUser
-//
-//    // 🚀 Fetch Payment Intent Immediately
-//    LaunchedEffect(context) {
-//        user?.getIdToken(true)?.addOnSuccessListener { result ->
-//            val token = result.token
-//
-//            "https://us-central1-financiallyfit-52b32.cloudfunctions.net/payment_sheet"
-//                .httpPost()
-//                .header("Authorization", "Bearer $token")
-//                .responseJson { _, _, result ->
-//                    Log.wtf("GNX", token)
-//                    if (result is Result.Success) {
-//                        Log.wtf("GNX", "Success!!!!")
-//                        val responseJson = result.get().obj()
-//                        paymentIntentClientSecret = responseJson.getString("paymentIntent")
-//                        customerConfig = PaymentSheet.CustomerConfiguration(
-//                            id = responseJson.getString("customer"),
-//                            ephemeralKeySecret = responseJson.getString("ephemeralKey")
-//                        )
-//                        val publishableKey = responseJson.getString("publishableKey")
-//                        PaymentConfiguration.init(context, publishableKey)
-//
-//                        // 🚀 Automatically present the payment sheet once data is ready
-//                        if (customerConfig != null && paymentIntentClientSecret != null) {
-//                            presentPaymentSheet(paymentSheet, customerConfig!!, paymentIntentClientSecret!!)
-//                        }
-//                    } else {
-//                        Log.wtf("GNX", "NOT SUCCESS!!!!")
-//                    }
-//                }
-//        }
-//    }
-//}
-
-
-//@Composable
-//fun PaymentScreen() {
-//    val paymentSheet = rememberPaymentSheet(::onPaymentSheetResult)
-//    val context = LocalContext.current
-//    var customerConfig by remember { mutableStateOf<PaymentSheet.CustomerConfiguration?>(null) }
-//    var paymentIntentClientSecret by remember { mutableStateOf<String?>(null) }
-//    val user = FirebaseAuth.getInstance().currentUser
-//
-//
-//    LaunchedEffect(context) {
-//
-//        user?.getIdToken(true)?.addOnSuccessListener { result ->
-//            val token = result.token
-//
-//
-//            // Call the Firebase Cloud Function to get Stripe PaymentIntent details
-//            "https://us-central1-financiallyfit-52b32.cloudfunctions.net/payment_sheet"  // Replace with actual backend URL
-//                .httpPost()
-//                .header("Authorization",
-////                    "Bearer $token"
-//                    "Bearer $token"
-//                )
-//                .responseJson { _, _, result ->
-//                    Log.wtf("GNX", token)
-//                    if (result is Result.Success) {
-//                        Log.wtf("GNX", "Success!!!!")
-//                        val responseJson = result.get().obj()
-//                        paymentIntentClientSecret = responseJson.getString("paymentIntent")
-//                        Log.wtf("GNX", paymentIntentClientSecret)
-//                        customerConfig = PaymentSheet.CustomerConfiguration(
-//                            id = responseJson.getString("customer"),
-//                            ephemeralKeySecret = responseJson.getString("ephemeralKey")
-//                        )
-//                        val publishableKey = responseJson.getString("publishableKey")
-//                        PaymentConfiguration.init(context, publishableKey)
-//                    } else
-//                        Log.wtf("GNX", "NOT SUCCESS!!!!")
-//                }
-//        }
-//    }
-//
-//    Button(
-//        onClick = {
-//            val currentConfig = customerConfig
-//            val currentClientSecret = paymentIntentClientSecret
-//            Log.d("GNX", customerConfig.toString())
-//            Log.d("GNX", paymentIntentClientSecret.toString())
-//            if (currentConfig != null && currentClientSecret != null) {
-//                presentPaymentSheet(paymentSheet, currentConfig, currentClientSecret)
-//            }
-//        }
-//    ) {
-//        Text("Checkout")
-//    }
-//}
 
 private fun presentPaymentSheet(
     paymentSheet: PaymentSheet,

@@ -2,11 +2,8 @@ package com.danrmzn.financiallyfit.ui
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
-import android.os.Build
 import android.util.Log
 import android.widget.TimePicker
-import android.widget.Toast
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -24,17 +21,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -42,10 +35,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TimeInput
-import androidx.compose.material3.TimePicker
-import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -74,44 +63,25 @@ import com.danrmzn.financiallyfit.TaskType
 import com.github.kittinunf.fuel.httpGet
 import com.github.kittinunf.fuel.json.responseJson
 import com.google.firebase.auth.FirebaseAuth
-import kotlinx.coroutines.tasks.await
-import okhttp3.OkHttpClient
-import okhttp3.Request
+
 import com.github.kittinunf.result.Result
-import com.stripe.android.core.networking.StripeRequest
 import kotlinx.coroutines.launch
-import kotlinx.datetime.DateTimeUnit
-import kotlinx.datetime.LocalDate
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.plus
-import kotlinx.datetime.toInstant
-import kotlinx.datetime.toLocalDateTime
-import org.json.JSONArray
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
-import network.chaintech.kmp_date_time_picker.ui.datetimepicker.WheelDateTimePickerView
-import network.chaintech.kmp_date_time_picker.utils.DateTimePickerView
-import network.chaintech.kmp_date_time_picker.utils.MAX
-import network.chaintech.kmp_date_time_picker.utils.MIN
-import network.chaintech.kmp_date_time_picker.utils.TimeFormat
-import network.chaintech.kmp_date_time_picker.utils.now
+
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
 
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddTaskScreen(navController: NavController) {
     var taskName by rememberSaveable { mutableStateOf("") }
     var selectedOption by rememberSaveable { mutableStateOf(TaskType.None.name) }
     var currency by rememberSaveable { mutableStateOf("") }
     var moneyAmount by rememberSaveable { mutableStateOf("") }
-    var taskList by rememberSaveable { mutableStateOf<TaskList?>(null) } // TaskList starts as null
+    var taskList by rememberSaveable { mutableStateOf<TaskList?>(null) }
     val repOptions = (1..100).map { it.toString() } // Options for reps (1-100)
     var selectedReps by rememberSaveable { mutableStateOf("") }
     var currencyOptions by rememberSaveable { mutableStateOf(emptyList<String>()) }
@@ -124,40 +94,8 @@ fun AddTaskScreen(navController: NavController) {
 
     val snackState = remember { SnackbarHostState() }
     val snackScope = rememberCoroutineScope()
+
     var finalTaskList by remember { mutableStateOf<TaskList?>(null) }
-
-
-
-    LaunchedEffect(Unit) {
-        val user = FirebaseAuth.getInstance().currentUser
-
-        user?.getIdToken(true)?.addOnSuccessListener { result ->
-            val token = result.token
-            Log.wtf("Auth", "Firebase Token: $token")
-
-            // Fetch the currency list from the backend
-            "https://us-central1-financiallyfit-52b32.cloudfunctions.net/get_supported_currencies"
-                .httpGet()
-                .header("Authorization", "Bearer $token")
-                .responseJson { _, _, result ->
-                    if (result is Result.Success) {
-                        try {
-                            val currencyList: List<String> =
-                                Json.decodeFromString(result.get().content)
-                            currencyOptions = currencyList
-                            Log.wtf("GNX", "Fetched Currencies: $currencyOptions")
-                        } catch (e: Exception) {
-                            Log.wtf("GNX", "JSON Parsing Error: ${e.message}")
-                        }
-                    } else {
-                        Log.wtf("GNX", "Failed to fetch currencies")
-                    }
-                }
-        }?.addOnFailureListener {
-            Log.wtf("AUTH", "Firebase Auth Error: ${it.message}")
-        }
-    }
-
 
     var expandedCurrencies by rememberSaveable { mutableStateOf(false) }
     var repsDropdownVisible by rememberSaveable { mutableStateOf(false) }
@@ -166,11 +104,7 @@ fun AddTaskScreen(navController: NavController) {
     var selectedTimeFormatted by rememberSaveable { mutableStateOf("") }
     val formatting = SimpleDateFormat("yyyy-MM-dd 'at' hh:mm a", Locale.getDefault())
 
-
-
-
     val context = LocalContext.current
-
 
     val temporaryTaskList = rememberSaveable(
         saver = Saver<SnapshotStateList<Task>, List<Map<String, Any>>>(
@@ -206,11 +140,44 @@ fun AddTaskScreen(navController: NavController) {
 
     var commit by rememberSaveable { mutableStateOf(false) }
 
-    PaymentScreen(finalTaskList = finalTaskList, triggerPayment = triggerPayment, onPaymentComplete = { success ->
-        if (success) {
-            Log.d("GNX", "Payment successful!")
+    PaymentScreen(
+        finalTaskList = finalTaskList,
+        triggerPayment = triggerPayment,
+        onPaymentComplete = { success ->
+            if (success) {
+                Log.d("GNX", "Payment successful!")
+            }
+        })
+
+    // get supported currencies from stripe api with secret key
+    LaunchedEffect(Unit) {
+        val user = FirebaseAuth.getInstance().currentUser
+
+        user?.getIdToken(true)?.addOnSuccessListener { result ->
+            val token = result.token
+            Log.wtf("Auth", "Firebase Token: $token")
+
+            "https://us-central1-financiallyfit-52b32.cloudfunctions.net/get_supported_currencies"
+                .httpGet()
+                .header("Authorization", "Bearer $token")
+                .responseJson { _, _, result ->
+                    if (result is Result.Success) {
+                        try {
+                            val currencyList: List<String> =
+                                Json.decodeFromString(result.get().content)
+                            currencyOptions = currencyList
+                            Log.wtf("GNX", "Fetched Currencies: $currencyOptions")
+                        } catch (e: Exception) {
+                            Log.wtf("GNX", "JSON Parsing Error: ${e.message}")
+                        }
+                    } else {
+                        Log.wtf("GNX", "Failed to fetch currencies")
+                    }
+                }
+        }?.addOnFailureListener {
+            Log.wtf("AUTH", "Firebase Auth Error: ${it.message}")
         }
-    })
+    }
 
     if (!commit) {
 
@@ -235,7 +202,7 @@ fun AddTaskScreen(navController: NavController) {
             }
 
 
-            // Temporary Task List Display
+            // first screen task preview
             if (temporaryTaskList.isNotEmpty()) {
                 item {
                     Box(
@@ -246,49 +213,48 @@ fun AddTaskScreen(navController: NavController) {
                             .padding(8.dp)
                     ) {
                         Column {
-                            // Heading for the Task List
                             Text(
                                 text = "Task List:",
                                 style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.padding(bottom = 8.dp) // Space below the heading
+                                modifier = Modifier.padding(bottom = 8.dp)
                             )
 
-                            // Display Each Task Below the Heading with a Remove Button
+                            // display all tasks in temporaryTaskList, with a remove button next to them
                             temporaryTaskList.forEachIndexed { index, task ->
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(bottom = 4.dp), // Space between tasks
+                                        .padding(bottom = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     if (task.type == TaskType.valueOf("Reps")) {
                                         Text(
                                             text = buildAnnotatedString {
                                                 withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
-                                                    append("${task.reps}x ") // Bold reps count
+                                                    append("${task.reps}x ")
                                                 }
-                                                append(task.name) // Task name
+                                                append(task.name)
                                             },
                                             style = MaterialTheme.typography.bodyMedium,
-                                            modifier = Modifier.weight(1f) // Take up remaining space
+                                            modifier = Modifier.weight(1f)
                                         )
                                     } else {
                                         Text(
                                             text = task.name,
                                             style = MaterialTheme.typography.bodyMedium,
-                                            modifier = Modifier.weight(1f) // Take up remaining space
+                                            modifier = Modifier.weight(1f)
                                         )
                                     }
 
-                                    // Add a Remove Button
+                                    // add remove button in the same row as the task
                                     Icon(
-                                        imageVector = Icons.Default.Close, // Use Material Design close icon
+                                        imageVector = Icons.Default.Close,
                                         contentDescription = "Remove Task",
                                         tint = MaterialTheme.colorScheme.error,
                                         modifier = Modifier
                                             .size(24.dp)
                                             .clickable {
-                                                // Remove the task from the list
+                                                // if removed
                                                 temporaryTaskList.removeAt(index)
                                             }
                                     )
@@ -305,7 +271,7 @@ fun AddTaskScreen(navController: NavController) {
             if (taskList == null) {
                 // Inputs for adding tasks and setting money
 
-                // TASK TYPE DROPDOWN>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+                // task code implemented
                 item {
                     var expanded by remember { mutableStateOf(false) }
                     Box {
@@ -319,7 +285,8 @@ fun AddTaskScreen(navController: NavController) {
                                     LaunchedEffect(interactionSource) {
                                         interactionSource.interactions.collect {
                                             if (it is PressInteraction.Release) {
-                                                // works like onClick
+                                                // made to ensure dropdown isn't only expanded upon
+                                                // only the dropdown arrow but the whole box
                                                 expanded = !expanded
 
                                             }
@@ -353,8 +320,9 @@ fun AddTaskScreen(navController: NavController) {
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                 }
-                // TASK TYPE DROPDOWN END>>>>>>>>>>>>>>
 
+
+                // display reps dropdown
                 if (repsDropdownVisible) {
                     item {
                         var repsExpanded by remember { mutableStateOf(false) }
@@ -404,7 +372,7 @@ fun AddTaskScreen(navController: NavController) {
                 }
 
 
-                // Task Name Input
+                // enter task name:
                 item {
                     OutlinedTextField(
                         value = taskName,
@@ -415,9 +383,8 @@ fun AddTaskScreen(navController: NavController) {
                     Spacer(modifier = Modifier.height(8.dp))
                 }
 
-
-
-
+                // add task and confirm buttons, aligned to be in one row, i am considering
+                // repositioning these
                 item {
                     Row(
                         modifier = Modifier
@@ -436,7 +403,7 @@ fun AddTaskScreen(navController: NavController) {
                                         selectedOption = ""
                                         repsDropdownVisible = false
                                     }
-                                    if (selectedOption == "Reps" && (selectedReps != ""))  {
+                                    if (selectedOption == "Reps" && (selectedReps != "")) {
                                         temporaryTaskList.add(
                                             Task(
                                                 taskName.trim(),
@@ -456,9 +423,8 @@ fun AddTaskScreen(navController: NavController) {
                             Text("Add Task")
                         }
 
-                        Spacer(modifier = Modifier.width(20.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
 
-                        // Commit Button
                         Button(
                             onClick = {
                                 commit = true
@@ -475,7 +441,6 @@ fun AddTaskScreen(navController: NavController) {
 
         }
     } else {
-        // SHALL BE MOVED TO NEXT SCREEN
 
         LazyColumn(
             modifier = Modifier
@@ -483,9 +448,8 @@ fun AddTaskScreen(navController: NavController) {
                 .padding(16.dp)
         ) {
 
-            // TaskList is committed, display its content
+            // tasklist has been committed.
             item {
-//                Text("Task List Committed!")
                 Text(
                     text = "Current Task List:",
                     style = MaterialTheme.typography.bodyLarge,
@@ -495,27 +459,27 @@ fun AddTaskScreen(navController: NavController) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(100.dp) // ✅ Fixed height
+                        .height(100.dp)
                         .padding(bottom = 8.dp)
                         .border(1.dp, MaterialTheme.colorScheme.surfaceVariant)
                         .padding(8.dp)
                 ) {
 
-                    LazyColumn( // ✅ Makes content scrollable if needed
+                    LazyColumn(
                         modifier = Modifier.fillMaxSize()
                     ) {
-
-                        items(temporaryTaskList.toList()) { task -> // ✅ Use LazyColumn for performance
+                        // room for refactoring
+                        items(temporaryTaskList.toList()) { task ->
                             if (task.type == TaskType.valueOf("Reps")) {
                                 Text(
                                     text = buildAnnotatedString {
                                         withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
-                                            append("${task.reps}x ") // Bold reps count
+                                            append("${task.reps}x ")
                                         }
                                         append(task.name) // Task name
                                     },
                                     style = MaterialTheme.typography.bodyMedium,
-                                    modifier = Modifier.padding(bottom = 4.dp) // Space between tasks
+                                    modifier = Modifier.padding(bottom = 4.dp)
                                 )
                             } else {
                                 Text(
@@ -528,7 +492,7 @@ fun AddTaskScreen(navController: NavController) {
                     }
                 }
 
-// Instructional Text Below Task List
+                // instructional text below small text.
                 Text(
                     text = "Click 'Go Back' if you need to edit tasks.",
                     style = MaterialTheme.typography.bodySmall,
@@ -538,13 +502,11 @@ fun AddTaskScreen(navController: NavController) {
 
 
             }
-            // Money Input for TaskList
 
-
-            /////////////////////////////////////////////// add currency
+            // implement money and currency amount buttons below.
 
             item {
-                // Money Amount Input (Replacing Hours Dropdown)
+
                 OutlinedTextField(
                     value = moneyAmount,
                     onValueChange = { moneyAmount = it },
@@ -605,11 +567,6 @@ fun AddTaskScreen(navController: NavController) {
             }
 
 
-            /// change to native syustem time picker
-
-
-
-
             // 1: DATEPICKER -> GET CALENDAR AND SET DATE (WITH 7 DAY LIMIT)
             // 2: DATEPICKER CALLBACK -> TIMEPICKER USING PREVIOUS CALENDAR
             // 3: CONVERT TO ZONEDTIMEZONE
@@ -623,18 +580,18 @@ fun AddTaskScreen(navController: NavController) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 4.dp),
-                    contentAlignment = Alignment.Center // ✅ Ensures button is always centered
+                    contentAlignment = Alignment.Center
                 ) {
                     Button(
                         onClick = { showDatePicker = true },
-                        modifier = Modifier.align(Alignment.Center) // ✅ Apply alignment to Button
+                        modifier = Modifier.align(Alignment.Center)
                     ) {
                         if (timeConfirmed) {
                             Text("Set Due Date & Time [SELECTED: $selectedTimeFormatted]")
                         } else {
                             Text("Set Due Date & Time")
                         }
-                        }
+                    }
 
                     SnackbarHost(hostState = snackState)
                 }
@@ -651,17 +608,17 @@ fun AddTaskScreen(navController: NavController) {
 
                             dateConfirmed = true
                             showDatePicker = false
-                            showTimePicker = true // Trigger time picker after date selection
+                            showTimePicker = true // not really a callback
                         },
                         calendar.get(Calendar.YEAR),
                         calendar.get(Calendar.MONTH),
                         calendar.get(Calendar.DAY_OF_MONTH)
                     )
 
-                    dpd.datePicker.minDate = Calendar.getInstance().
-                    apply { add(Calendar.MINUTE, 60)}.timeInMillis
-                    dpd.datePicker.maxDate = Calendar.getInstance().
-                    apply { add(Calendar.DAY_OF_MONTH, 7)}.timeInMillis
+                    dpd.datePicker.minDate =
+                        Calendar.getInstance().apply { add(Calendar.MINUTE, 60) }.timeInMillis
+                    dpd.datePicker.maxDate =
+                        Calendar.getInstance().apply { add(Calendar.DAY_OF_MONTH, 7) }.timeInMillis
 
                     dpd.setOnCancelListener { showDatePicker = false }
                     dpd.setOnDismissListener { showDatePicker = false }
@@ -673,12 +630,14 @@ fun AddTaskScreen(navController: NavController) {
                 if (showTimePicker) {
 
 
-                    // make new calandar that contains min time.
+                    // TODO: make new calendar that contains min time.
 
                     // on hitting confirm button, check if selected time > min time.
                     // if yes, proceed as normal.
-                    // if no, do not close the box, rather output toast message outlining minimum
-                    // due time
+                    // if not, output toast message outlining minimum due time
+
+
+                    // calendar2 contains min time.
                     val calendar2 = Calendar.getInstance()
                     calendar2.add(Calendar.MINUTE, 60)
 
@@ -686,27 +645,28 @@ fun AddTaskScreen(navController: NavController) {
                         context,
                         { _: TimePicker, hour: Int, minute: Int ->
 
-
+                            // calendar3 contains selected time
                             val calendar3 = calendar.clone() as Calendar
 
                             calendar3.set(Calendar.HOUR_OF_DAY, hour)
                             calendar3.set(Calendar.MINUTE, minute)
 
-
-
-                            // 🚀 Check if selected time is before `calendar2`
+                            // check if calendar3 time is valid
                             if (calendar3.timeInMillis < calendar2.timeInMillis) {
                                 val minTimeFormatted = formatting.format(calendar2.time)
 
 
                                 snackScope.launch {
                                     snackState.showSnackbar(
-                                        "⚠️ Please select a time at least 1 hour from now.\n⏳ Minimum allowed: $minTimeFormatted")
+                                        "⚠️ Please select a time at least 1 hour from now.\n⏳ Minimum allowed: $minTimeFormatted"
+                                    )
                                 }
                             } else {
+                                // if valid, change default calendar time to calendar3 time
                                 calendar.set(Calendar.HOUR_OF_DAY, hour)
                                 calendar.set(Calendar.MINUTE, minute)
 
+                                // snackbar the time
                                 snackScope.launch {
                                     selectedTimeFormatted = formatting.format(calendar.time)
                                     snackState.showSnackbar("\uD83D\uDCC5 Entered due date: $selectedTimeFormatted")
@@ -722,8 +682,11 @@ fun AddTaskScreen(navController: NavController) {
                         },
                         calendar.get(Calendar.HOUR_OF_DAY),
                         calendar.get(Calendar.MINUTE),
-                        false // 🚀 Change to true for 24-hour format
+                        false
                     )
+
+                    // set these to false to RESTART the time and date picking
+                    // in case of dismissal.
 
                     tpd.setOnCancelListener { showTimePicker = false }
                     tpd.setOnDismissListener { showTimePicker = false }
@@ -738,14 +701,15 @@ fun AddTaskScreen(navController: NavController) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(bottom = 16.dp) // Add bottom padding for spacing
+                        .padding(bottom = 16.dp)
                 ) {
                     Button(
                         onClick = {
                             Log.wtf("DNX", "BEFORE")
 
+                            // init a new finalTaskList, if needed.
                             if (finalTaskList == null) {
-                                finalTaskList = TaskList() // ✅ Ensure it’s initialized
+                                finalTaskList = TaskList()
                             }
 
                             finalTaskList?.let { taskList ->
@@ -755,12 +719,15 @@ fun AddTaskScreen(navController: NavController) {
                                 taskList.calendar = calendar
                             }
                             Log.wtf("DNX", finalTaskList.toString())
+
+                            // payment! (the paymentintent middleware currently points towards
+                            // the object pointed at by variable finalTaskList
                             triggerPayment = true
-//                            navController.navigate("payment")
+                            // navController.navigate("payment")
                         },
                         modifier = Modifier
-                            .align(Alignment.BottomCenter) // 🚀 Centers at the bottom
-                            .padding(horizontal = 16.dp), // Optional: Adds side padding
+                            .align(Alignment.BottomCenter)
+                            .padding(horizontal = 16.dp),
                         enabled = currency.isNotEmpty()
                                 && moneyAmount.isNotEmpty()
                                 && timeConfirmed
@@ -769,9 +736,6 @@ fun AddTaskScreen(navController: NavController) {
                         Text("Confirm and Proceed to Payment")
                     }
                 }
-
-
-
 
             }
         }
