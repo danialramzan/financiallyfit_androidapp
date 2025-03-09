@@ -67,6 +67,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.danrmzn.financiallyfit.PaymentScreen
 import com.danrmzn.financiallyfit.Task
 import com.danrmzn.financiallyfit.TaskList
 import com.danrmzn.financiallyfit.TaskType
@@ -108,8 +109,6 @@ import java.util.Locale
 fun AddTaskScreen(navController: NavController) {
     var taskName by rememberSaveable { mutableStateOf("") }
     var selectedOption by rememberSaveable { mutableStateOf(TaskType.None.name) }
-    var hours by rememberSaveable { mutableStateOf("") }
-    var minutes by rememberSaveable { mutableStateOf("") }
     var currency by rememberSaveable { mutableStateOf("") }
     var moneyAmount by rememberSaveable { mutableStateOf("") }
     var taskList by rememberSaveable { mutableStateOf<TaskList?>(null) } // TaskList starts as null
@@ -123,10 +122,10 @@ fun AddTaskScreen(navController: NavController) {
     var dateConfirmed by rememberSaveable { mutableStateOf(false) }
     var timeConfirmed by rememberSaveable { mutableStateOf(false) }
 
-    val state = rememberTimePickerState()
-    val formatter = remember { SimpleDateFormat("hh:mm a", Locale.getDefault()) }
     val snackState = remember { SnackbarHostState() }
     val snackScope = rememberCoroutineScope()
+    var finalTaskList by remember { mutableStateOf<TaskList?>(null) }
+
 
 
     LaunchedEffect(Unit) {
@@ -160,37 +159,17 @@ fun AddTaskScreen(navController: NavController) {
     }
 
 
-    var expandedHours by rememberSaveable { mutableStateOf(false) }
-    var expandedMinutes by rememberSaveable { mutableStateOf(false) }
     var expandedCurrencies by rememberSaveable { mutableStateOf(false) }
     var repsDropdownVisible by rememberSaveable { mutableStateOf(false) }
-    var isDialogOpen by rememberSaveable { mutableStateOf(false) }
-    val calendar = Calendar.getInstance()
+    var triggerPayment by remember { mutableStateOf(false) }
+    lateinit var calendar: Calendar
+    var selectedTimeFormatted by rememberSaveable { mutableStateOf("") }
+    val formatting = SimpleDateFormat("yyyy-MM-dd 'at' hh:mm a", Locale.getDefault())
+
+
 
 
     val context = LocalContext.current
-
-
-    var selectedHour by remember { mutableStateOf(0) }
-    var selectedMinute by remember { mutableStateOf(0) }
-    var timeString by remember { mutableStateOf("Select Time") }
-
-
-    // this function crashes, fix it
-    LaunchedEffect(Unit) {
-        val result = try {
-            Log.d("GNX", "before")
-            currencyOptions = getCurrencyOptions()  // ✅ Fetch data only once
-        } catch (e: Exception) {
-            Toast.makeText(
-                context,
-                e.message.toString()
-                //"Failed to load data, please check your internet connection!"
-                , Toast.LENGTH_SHORT
-            ).show()
-            currencyOptions = emptyList<String>()
-        }
-    }
 
 
     val temporaryTaskList = rememberSaveable(
@@ -225,10 +204,13 @@ fun AddTaskScreen(navController: NavController) {
         mutableStateListOf<Task>()
     }
 
-
-    val hourOptions = (0..24).map { it.toString().padStart(2, '0') }
-    val minuteOptions = (0..59).map { it.toString().padStart(2, '0') }
     var commit by rememberSaveable { mutableStateOf(false) }
+
+    PaymentScreen(finalTaskList = finalTaskList, triggerPayment = triggerPayment, onPaymentComplete = { success ->
+        if (success) {
+            Log.d("GNX", "Payment successful!")
+        }
+    })
 
     if (!commit) {
 
@@ -450,7 +432,11 @@ fun AddTaskScreen(navController: NavController) {
                                     val taskType = TaskType.valueOf(selectedOption)
                                     if (selectedOption == "None") {
                                         temporaryTaskList.add(Task(taskName.trim(), taskType, 0))
-                                    } else {
+                                        taskName = ""
+                                        selectedOption = ""
+                                        repsDropdownVisible = false
+                                    }
+                                    if (selectedOption == "Reps" && (selectedReps != ""))  {
                                         temporaryTaskList.add(
                                             Task(
                                                 taskName.trim(),
@@ -458,13 +444,14 @@ fun AddTaskScreen(navController: NavController) {
                                                 selectedReps.toInt()
                                             )
                                         )
+                                        taskName = ""
+                                        selectedOption = ""
+                                        repsDropdownVisible = false
                                     }
-                                    taskName = ""
-                                    selectedOption = ""
-                                    repsDropdownVisible = false
+
                                 }
                             },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
                         ) {
                             Text("Add Task")
                         }
@@ -474,7 +461,6 @@ fun AddTaskScreen(navController: NavController) {
                         // Commit Button
                         Button(
                             onClick = {
-                                println("Tasks committed: $temporaryTaskList")
                                 commit = true
                             },
                             modifier = Modifier.weight(1f),
@@ -489,7 +475,7 @@ fun AddTaskScreen(navController: NavController) {
 
         }
     } else {
-        // SHALL BE MNOVED TO NEXT SCREEN
+        // SHALL BE MOVED TO NEXT SCREEN
 
         LazyColumn(
             modifier = Modifier
@@ -549,55 +535,6 @@ fun AddTaskScreen(navController: NavController) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 8.dp) // Space below tagline
                 )
-
-
-//                 Temporary Task List Display
-//                        Box(
-//                            modifier = Modifier
-//                                .fillMaxWidth()
-//                                .padding(bottom = 8.dp)
-//                                .border(1.dp, MaterialTheme.colorScheme.surfaceVariant)
-//                                .padding(8.dp)
-//                        ) {
-//                            Column {
-//                                // Heading for the Task List
-//                                Text(
-//                                    text = "Current Task List:",
-//                                    style = MaterialTheme.typography.bodyLarge,
-//                                    modifier = Modifier.padding(bottom = 8.dp) // Space below the heading
-//                                )
-//
-//                                // Display Each Task Below the Heading
-//                                temporaryTaskList.forEach { task ->
-//                                    if (task.type == TaskType.valueOf("Reps")) {
-//                                        Text(
-//                                            text = buildAnnotatedString {
-//                                                withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
-//                                                    append("${task.reps}x ") // Bold reps count
-//                                                }
-//                                                append(task.name) // Task name
-//                                            },
-//                                            style = MaterialTheme.typography.bodyMedium,
-//                                            modifier = Modifier.padding(bottom = 4.dp) // Space between tasks
-//                                        )
-//                                    } else {
-//                                        Text(
-//                                            text = task.name,
-//                                            style = MaterialTheme.typography.bodyMedium,
-//                                            modifier = Modifier.padding(bottom = 4.dp) // Space between tasks
-//                                        )
-//                                    }
-//                            }
-//
-//                        }
-//
-//                }
-//                Text(
-//                    text = "Click 'Go Back' if you need to edit tasks.",
-//                    style = MaterialTheme.typography.bodySmall,
-//                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-//                    modifier = Modifier.padding(bottom = 8.dp) // Space below the tagline
-//                )
 
 
             }
@@ -682,15 +619,28 @@ fun AddTaskScreen(navController: NavController) {
             ///
             item {
 
-                Box {
-                    Button(onClick = { showDatePicker = true }) {
-                        Text("Set Due Date & Time")
-                    }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    contentAlignment = Alignment.Center // ✅ Ensures button is always centered
+                ) {
+                    Button(
+                        onClick = { showDatePicker = true },
+                        modifier = Modifier.align(Alignment.Center) // ✅ Apply alignment to Button
+                    ) {
+                        if (timeConfirmed) {
+                            Text("Set Due Date & Time [SELECTED: $selectedTimeFormatted]")
+                        } else {
+                            Text("Set Due Date & Time")
+                        }
+                        }
 
                     SnackbarHost(hostState = snackState)
                 }
 
                 if (showDatePicker) {
+                    calendar = Calendar.getInstance()
 
                     val dpd = DatePickerDialog(
                         context,
@@ -708,7 +658,8 @@ fun AddTaskScreen(navController: NavController) {
                         calendar.get(Calendar.DAY_OF_MONTH)
                     )
 
-                    dpd.datePicker.minDate = Calendar.getInstance().timeInMillis
+                    dpd.datePicker.minDate = Calendar.getInstance().
+                    apply { add(Calendar.MINUTE, 60)}.timeInMillis
                     dpd.datePicker.maxDate = Calendar.getInstance().
                     apply { add(Calendar.DAY_OF_MONTH, 7)}.timeInMillis
 
@@ -720,275 +671,111 @@ fun AddTaskScreen(navController: NavController) {
 
 
                 if (showTimePicker) {
-                    val timePickerDialog = TimePickerDialog(
+
+
+                    // make new calandar that contains min time.
+
+                    // on hitting confirm button, check if selected time > min time.
+                    // if yes, proceed as normal.
+                    // if no, do not close the box, rather output toast message outlining minimum
+                    // due time
+                    val calendar2 = Calendar.getInstance()
+                    calendar2.add(Calendar.MINUTE, 60)
+
+                    val tpd = TimePickerDialog(
                         context,
                         { _: TimePicker, hour: Int, minute: Int ->
-                            calendar.set(Calendar.HOUR_OF_DAY, hour)
-                            calendar.set(Calendar.MINUTE, minute)
 
-                            snackScope.launch {
-                                snackState.showSnackbar("Entered time: $calendar.")
+
+                            val calendar3 = calendar.clone() as Calendar
+
+                            calendar3.set(Calendar.HOUR_OF_DAY, hour)
+                            calendar3.set(Calendar.MINUTE, minute)
+
+
+
+                            // 🚀 Check if selected time is before `calendar2`
+                            if (calendar3.timeInMillis < calendar2.timeInMillis) {
+                                val minTimeFormatted = formatting.format(calendar2.time)
+
+
+                                snackScope.launch {
+                                    snackState.showSnackbar(
+                                        "⚠️ Please select a time at least 1 hour from now.\n⏳ Minimum allowed: $minTimeFormatted")
+                                }
+                            } else {
+                                calendar.set(Calendar.HOUR_OF_DAY, hour)
+                                calendar.set(Calendar.MINUTE, minute)
+
+                                snackScope.launch {
+                                    selectedTimeFormatted = formatting.format(calendar.time)
+                                    snackState.showSnackbar("\uD83D\uDCC5 Entered due date: $selectedTimeFormatted")
+
+
+                                }
+                                showTimePicker = false
+                                timeConfirmed = true
+                                dateConfirmed = true
+
                             }
-                            Log.wtf("GNX", calendar.toString())
 
-                            showTimePicker = false
                         },
                         calendar.get(Calendar.HOUR_OF_DAY),
                         calendar.get(Calendar.MINUTE),
-                        false
+                        false // 🚀 Change to true for 24-hour format
                     )
 
-                    timePickerDialog.show()
+                    tpd.setOnCancelListener { showTimePicker = false }
+                    tpd.setOnDismissListener { showTimePicker = false }
+
+                    tpd.show()
                 }
             }
 
 
-
-
-
             item {
 
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = 16.dp) // Add bottom padding for spacing
+                ) {
+                    Button(
+                        onClick = {
+                            Log.wtf("DNX", "BEFORE")
 
-                // allegedly good code
-
-//                    if (isDialogOpen) {
-//                        Dialog(onDismissRequest = { onDismissRequest() }) {
-//                            Box(
-//                                modifier = Modifier
-//                                    .fillMaxWidth()
-//                                    .padding(16.dp)
-//                                    .background(
-//                                        color = MaterialTheme.colorScheme.background,
-//                                        shape = RoundedCornerShape(8.dp)
-//                                    )
-//                                    .padding(16.dp) // Inner padding
-//                            ) {
-//                                Column(
-//                                    modifier = Modifier
-//                                        .verticalScroll(rememberScrollState()) // Enable scrolling for overflow
-//                                ) {
-//                                    // Title
-//                                    Text(
-//                                        text = "Confirm Payment and Start Task",
-//                                        style = MaterialTheme.typography.headlineSmall,
-//                                        modifier = Modifier.padding(bottom = 8.dp)
-//                                    )
-//
-//                                    // Display the total amount of money
-//                                    Text(text = "Amount: $$moneyAmount")
-//
-//                                    Spacer(modifier = Modifier.height(8.dp))
-//
-//                                    // Calculate start and end times using LocalTime
-//                                    val currentTime = LocalDateTime.now()
-//                                    val startTime = currentTime.plusMinutes(5)
-//                                    val endTime = startTime.plusMinutes(hours.toLong() * 60 + minutes.toLong())
-//                                    val formatter = DateTimeFormatter.ofPattern("MMMM d, yyyy h:mm a")
-//                                    val formattedStartTime = startTime.format(formatter)
-//                                    val formattedEndTime = endTime.format(formatter)
-//
-//                                    // Show the estimated start time and end time
-//                                    Text(text = "Estimated start time: $formattedStartTime")
-//                                    Text(text = "Estimated end time: $formattedEndTime")
-//
-//                                    Spacer(modifier = Modifier.height(8.dp))
-//
-//                                    // Inform the user about task start and preauthorization
-//                                    Text(
-//                                        text = "The time to do your task will start as soon as payment is pre-authorized. " +
-//                                                "The above times are given for reference only and assume payment is pre-authorized in 5 minutes from now."
-//                                    )
-//
-//                                    Spacer(modifier = Modifier.height(16.dp))
-//
-//                                    // Display the task list
-//                                    Text(text = "Tasks to complete:")
-//                                    temporaryTaskList.forEach { task ->
-//                                        if (task.type == TaskType.valueOf("Reps")) {
-//                                            Text(
-//                                                text = buildAnnotatedString {
-//                                                    withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
-//                                                        append("${task.reps}x ") // Bold reps count
-//                                                    }
-//                                                    append(task.name) // Task name
-//                                                },
-//                                                style = MaterialTheme.typography.bodyMedium,
-//                                                modifier = Modifier.padding(bottom = 4.dp)
-//                                            )
-//                                        } else {
-//                                            Text(
-//                                                text = task.name,
-//                                                style = MaterialTheme.typography.bodyMedium,
-//                                                modifier = Modifier.padding(bottom = 4.dp)
-//                                            )
-//                                        }
-//                                    }
-//
-//                                    Spacer(modifier = Modifier.height(16.dp))
-//
-//                                    // Buttons Row
-//                                    Row(
-//                                        horizontalArrangement = Arrangement.End,
-//                                        modifier = Modifier.fillMaxWidth()
-//                                    ) {
-//                                        TextButton(onClick = { onDismissRequest() }) {
-//                                            Text("Cancel")
-//                                        }
-//                                        Spacer(modifier = Modifier.width(8.dp))
-//                                        TextButton(onClick = {
-//                                            println("Navigating to payment...")
-//                                            onDismissRequest()
-//                                        }) {
-//                                            Text("Confirm")
-//                                        }
-//                                    }
-//                                }
-//                            }
-//                        }
-
-
-                if (isDialogOpen) {
-                    AlertDialog(
-                        onDismissRequest = { isDialogOpen = false },
-                        title = {
-                            Text(text = "Confirm Payment and Start Task")
-                        },
-                        text = {
-                            Column(
-                                modifier = Modifier
-                                    .verticalScroll(rememberScrollState()) // Add scrolling capability
-                                    .padding(vertical = 8.dp)
-//                                        .weight(weight = 1f, fill = false)
-                            ) {
-                                // Display the total amount of money
-                                Text(text = "Amount: $$moneyAmount")
-
-                                Spacer(modifier = Modifier.height(8.dp))
-
-
-                                // Calculate start and end times using LocalTime
-                                val currentTime = LocalDateTime.now()
-                                val startTime = currentTime.plusMinutes(5)
-                                val endTime =
-                                    startTime.plusMinutes(hours.toLong() * 60 + minutes.toLong())
-                                val formatter = DateTimeFormatter.ofPattern("MMMM d, yyyy h:mm a")
-                                val formattedStartTime = startTime.format(formatter)
-                                val formattedEndTime = endTime.format(formatter)
-
-                                // Show the estimated start time and end time
-                                Text(text = "Estimated start time: $formattedStartTime")
-                                Text(text = "Estimated end time: $formattedEndTime")
-
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                Text(
-                                    text = "The time to do your task will start as soon as payment is pre-authorized. " +
-                                            "The above times give are given for reference only and assume payment is pre-authorized in 5 minutes from now."
-                                )
-
-
-
-
-
-
-
-
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                // Inform the user about task start and preauthorization
-
-                                Spacer(modifier = Modifier.height(16.dp))
-
-                                // Display the task list
-//                                    Text(text = "Tasks to complete:")
-//                                    temporaryTaskList.forEach { task ->
-//                                        if (task.type == TaskType.valueOf("Reps")) {
-//                                            Text(
-//                                                text = buildAnnotatedString {
-//                                                    withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
-//                                                        append("${task.reps}x ") // Bold reps count
-//                                                    }
-//                                                    append(task.name) // Task name
-//                                                },
-//                                                style = MaterialTheme.typography.bodyMedium,
-//                                                modifier = Modifier.padding(bottom = 4.dp) // Space between tasks
-//                                            )
-//                                        } else {
-//                                            Text(
-//                                                text = task.name,
-//                                                style = MaterialTheme.typography.bodyMedium,
-//                                                modifier = Modifier.padding(bottom = 4.dp) // Space between tasks
-//                                            )
-//                                        }
-//                                    }
+                            if (finalTaskList == null) {
+                                finalTaskList = TaskList() // ✅ Ensure it’s initialized
                             }
-                        },
-                        confirmButton = {
-                            TextButton(onClick = {
-                                // Navigate to payment or perform payment logic
 
-                                // init stripe callback
-                                // once done,
-
-
-                                isDialogOpen = false
-                                println("Navigating to payment...")
-                                navController.navigate("payment")
-                            }) {
-                                Text("Confirm and Proceed to Payment")
+                            finalTaskList?.let { taskList ->
+                                taskList.copyTasks(temporaryTaskList.toList())
+                                taskList.moneyAmount = moneyAmount.toDoubleOrNull()!!
+                                taskList.currency = currency.lowercase()
+                                taskList.calendar = calendar
                             }
+                            Log.wtf("DNX", finalTaskList.toString())
+                            triggerPayment = true
+//                            navController.navigate("payment")
                         },
-                        dismissButton = {
-                            TextButton(onClick = { isDialogOpen = false }) {
-                                Text("Cancel")
-                            }
-                        }
-                    )
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter) // 🚀 Centers at the bottom
+                            .padding(horizontal = 16.dp), // Optional: Adds side padding
+                        enabled = currency.isNotEmpty()
+                                && moneyAmount.isNotEmpty()
+                                && timeConfirmed
+                                && dateConfirmed
+                    ) {
+                        Text("Confirm and Proceed to Payment")
+                    }
                 }
+
+
+
+
             }
         }
     }
 }
 
-suspend fun getCurrencyOptions(): List<String> {
-    val user = FirebaseAuth.getInstance().currentUser ?: return emptyList()
-    val token = user.getIdToken(true).await().token ?: return emptyList()
-    Log.d("GNX", "1")
-    val client = OkHttpClient()
-    val request = Request.Builder()
-        .url(
-            "https://us-central1-financiallyfit-52b32.cloudfunctions.net/get_supported_currencies"
-        )
-        .header("Authorization", "Bearer $token")
-        .build()
-    Log.d("GNX", "2")
 
-    // val response = client.newCall(request).execute()
-
-    try {
-        Log.d("GNX", "Executing request...")
-        val response = client.newCall(request).execute()
-        Log.d("GNX", "3 - Response received")
-    } catch (e: Exception) {
-        Log.e("GNX", "Request failed: ${e.message}", e)
-    }
-    return emptyList<String>()
-
-
-//    if (!response.isSuccessful) throw Exception("Request failed with status code: ${response.code}")
-//    val responseText = response.body?.string() ?: throw Exception("Response body is null")
-//    val jsonResponse = JSONArray(responseText)
-//    return List(jsonResponse.length()) { jsonResponse.getString(it) }
-}
-
-
-fun isValidTaskInput(
-    moneyAmount: String,
-    hours: String,
-    minutes: String
-): Boolean {
-    return moneyAmount.isNotEmpty() &&
-            hours.isNotEmpty() &&
-            minutes.isNotEmpty() &&
-            ((hours.toIntOrNull() ?: 0) > 0 || (minutes.toIntOrNull() ?: 0) >= 30)
-}

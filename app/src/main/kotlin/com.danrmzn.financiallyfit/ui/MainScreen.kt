@@ -150,7 +150,7 @@ fun NavigationGraph(navController: NavHostController) {
         }
 
         composable("payment") {
-            PaymentScreen()
+//            PaymentScreen()
         }
     }
 }
